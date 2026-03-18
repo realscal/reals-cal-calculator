@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>נדל&quot;ן פרו — מערכת מכירות</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f5f3ee; --white:#fff;
+  --border:#e2ddd6; --border2:#ccc6bc;
+  --ink:#1a1714; --ink2:#55504a; --ink3:#999088;
+  --gold:#a8720a; --gold-lt:#fdf4dd; --gold-bd:#e8c84a;
+  --green:#186038; --green-lt:#eaf4ef;
+  --red:#a82820; --red-lt:#fdf0ee;
+  --blue:#0f5299; --blue-lt:#e8f1fc;
+  --orange:#b55c08; --orange-lt:#fef2e6;
+  --r:10px; --sh:0 2px 12px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;font-size:14px;min-height:100vh}
+
+/* ─── LOGIN ─── */
+#login-wrap{position:fixed;inset:0;background:var(--ink);z-index:999;display:flex;align-items:center;justify-content:center}
+.login-card{background:#fff;border-radius:20px;padding:44px 48px;width:420px;max-width:95vw;box-shadow:0 32px 80px rgba(0,0,0,.4)}
+.login-logo{font-family:'DM Serif Display',serif;font-size:2rem;margin-bottom:4px;color:var(--ink)}
+.login-sub{color:var(--ink3);font-size:.83rem;margin-bottom:28px}
+.login-seg{display:flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden;margin-bottom:18px}
+.login-seg button{flex:1;padding:9px;background:#f8f6f2;border:none;font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:700;color:var(--ink3);cursor:pointer;transition:.15s}
+.login-seg button.on{background:var(--ink);color:#fff}
+.user-btn{display:flex;align-items:center;gap:12px;padding:13px 15px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#faf8f4;margin-bottom:8px;transition:.14s}
+.user-btn:hover{border-color:var(--gold);background:var(--gold-lt)}
+.user-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.user-name{font-weight:700;font-size:.9rem}
+.user-role{font-size:.72rem;color:var(--ink3)}
+
+/* ─── HEADER ─── */
+header{background:var(--ink);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100}
+.logo{font-family:'DM Serif Display',serif;font-size:1.1rem;color:#fff;display:flex;align-items:center;gap:8px}
+.logo span{background:var(--gold);color:#fff;font-family:'Heebo',sans-serif;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.5px}
+nav{display:flex;gap:2px}
+nav button{background:none;border:none;color:rgba(255,255,255,.4);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:600;transition:.14s}
+nav button.on{background:rgba(255,255,255,.12);color:#fff}
+nav button:hover:not(.on){color:rgba(255,255,255,.75)}
+.user-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 13px;cursor:pointer;font-size:.78rem;color:rgba(255,255,255,.6);font-weight:600;transition:.14s}
+.user-pill:hover{background:rgba(255,255,255,.12)}
+.dot{width:7px;height:7px;border-radius:50%}
+
+/* ─── LAYOUT ─── */
+main{padding:22px 26px;max-width:1400px;margin:0 auto}
+.tab{display:none}.tab.on{display:block;animation:up .2s ease}
+@keyframes up{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── CARDS ─── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);margin-bottom:14px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)}
+.card-hd h3{font-family:'DM Serif Display',serif;font-size:.98rem;font-weight:400}
+
+/* ─── KPI ─── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.kpi-lbl{font-size:.67rem;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);font-weight:700;margin-bottom:5px}
+.kpi-val{font-family:'DM Serif Display',serif;font-size:1.6rem;line-height:1}
+.kpi-sub{font-size:.71rem;color:var(--ink3);margin-top:3px}
+.cg{color:var(--gold)}.cgreen{color:var(--green)}.cred{color:var(--red)}.cblue{color:var(--blue)}.corange{color:var(--orange)}
+
+/* ─── GRID ─── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+/* ─── FORM ─── */
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--ink2)}
+.fg input,.fg select,.fg textarea{background:#f9f7f4;border:1px solid var(--border2);border-radius:7px;padding:8px 10px;font-family:'Heebo',sans-serif;font-size:.87rem;color:var(--ink);direction:rtl;width:100%;transition:.13s}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--gold);background:var(--gold-lt);box-shadow:0 0 0 3px rgba(168,114,10,.09)}
+.fg .hint{font-size:.67rem;color:var(--ink3);margin-top:2px}
+.fg.hi input,.fg.hi select{border-color:var(--blue);background:var(--blue-lt);font-weight:700;font-size:1rem}
+.fg.ho input{border-color:var(--orange);background:var(--orange-lt);font-weight:700}
+
+/* ─── BUTTONS ─── */
+.btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:700;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:disabled{opacity:.4;cursor:default}
+.bn{background:var(--ink);color:#fff}.bn:hover{background:#2d2923;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.bg{background:var(--gold);color:#fff}.bg:hover{background:#8a5d08}
+.bgreen{background:var(--green);color:#fff}.bgreen:hover{background:#124d2d}
+.bgh{background:transparent;border:1px solid var(--border2);color:var(--ink2)}.bgh:hover{border-color:var(--ink);color:var(--ink)}
+.bdel{background:transparent;border:1px solid #eab8b4;color:var(--red);padding:5px 9px;font-size:.73rem}.bdel:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.bsm{padding:5px 10px;font-size:.75rem}
+.bic{padding:5px 8px;background:transparent;border:1px solid var(--border);color:var(--ink2);border-radius:6px;cursor:pointer;font-size:.74rem;transition:.13s}.bic:hover{background:var(--ink);color:#fff}
+
+/* ─── BADGE ─── */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.bdg-g{background:var(--green-lt);color:var(--green)}
+.bdg-r{background:var(--red-lt);color:var(--red)}
+.bdg-o{background:var(--gold-lt);color:var(--gold);border:1px solid var(--gold-bd)}
+.bdg-b{background:var(--blue-lt);color:var(--blue)}
+.bdg-or{background:var(--orange-lt);color:var(--orange)}
+.bdg-gr{background:#f0ede8;color:var(--ink3)}
+.nb{display:inline-flex;align-items:center;justify-content:center;background:var(--orange);color:#fff;border-radius:10px;font-size:.62rem;font-weight:800;padding:1px 5px;min-width:16px;height:16px;vertical-align:middle;margin-right:3px}
+
+/* ─── TABLE ─── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{color:var(--ink3);font-weight:700;padding:8px 10px;text-align:right;border-bottom:2px solid var(--border);font-size:.67rem;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf8f5}
+
+/* ─── INFO BOXES ─── */
+.ib{border-radius:8px;padding:10px 13px;font-size:.8rem;line-height:1.6}
+.ib-o{background:var(--gold-lt);border:1px solid var(--gold-bd);color:#7a5600}
+.ib-g{background:var(--green-lt);border:1px solid #a5d4bb;color:var(--green)}
+.ib-r{background:var(--red-lt);border:1px solid #f0b8b4;color:var(--red)}
+.ib-b{background:var(--blue-lt);border:1px solid #aac6ed;color:var(--blue)}
+.ib-or{background:var(--orange-lt);border:1px solid #f0c898;color:var(--orange)}
+
+/* ─── OVERLAY / MODAL ─── */
+.ov{position:fixed;inset:0;background:rgba(26,23,20,.6);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center}
+.ov.on{display:flex}
+.modal{background:#fff;border-radius:14px;padding:24px 26px;width:580px;max-width:96vw;max-height:94vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:up .2s ease}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.modal-hd h2{font-family:'DM Serif Display',serif;font-size:1.1rem;font-weight:400}
+.modal-ft{display:flex;gap:8px;margin-top:16px;padding-top:13px;border-top:1px solid var(--border)}
+
+/* ─── MISC ─── */
+hr{border:none;border-top:1px solid var(--border);margin:13px 0}
+.fb{display:flex;justify-content:space-between;align-items:center}
+.fc{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mt2{margin-top:8px}.mt3{margin-top:12px}.mt4{margin-top:16px}
+.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}.mb4{margin-bottom:16px}
+.s{font-size:.8rem}.xs{font-size:.71rem}.dim{color:var(--ink3)}.bold{font-weight:700}
+.vat{font-size:.65rem;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--blue-lt);color:var(--blue)}
+.ch{height:210px;position:relative}
+.empty{text-align:center;padding:40px;color:var(--ink3)}
+
+/* ─── NPV ROWS ─── */
+.npv-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:7px;background:#f9f7f4;border:1px solid var(--border);font-size:.81rem;margin-bottom:5px}
+
+/* ─── SALES CALCULATOR ─── */
+.sv-wrap{max-width:700px;margin:0 auto}
+.sv-hd{text-align:center;padding:24px 0 18px}
+.sv-hd h1{font-family:'DM Serif Display',serif;font-size:1.9rem;margin-bottom:4px}
+.sv-hd p{color:var(--ink3);font-size:.84rem}
+.step-lbl{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:10px}
+
+/* project cards grid */
+.proj-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px}
+.proj-card{border:2px solid var(--border);border-radius:10px;padding:13px 14px;cursor:pointer;background:#f9f7f4;transition:.14s}
+.proj-card:hover{border-color:var(--gold);background:var(--gold-lt)}
+.proj-card.sel{border-color:var(--gold);background:var(--gold-lt)}
+.proj-card .pname{font-weight:700;font-size:.9rem}
+.proj-card .ploc{font-size:.72rem;color:var(--ink3);margin-top:2px}
+.proj-card .pcnt{font-size:.75rem;font-weight:700;margin-top:6px}
+
+/* apt cards grid */
+.apt-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.apt-card{border:2px solid var(--border);border-radius:10px;padding:11px 13px;cursor:pointer;background:#f9f7f4;transition:.14s}
+.apt-card:hover{border-color:var(--blue);background:var(--blue-lt)}
+.apt-card.sel{border-color:var(--blue);background:var(--blue-lt)}
+.apt-card .anum{font-weight:800;font-size:1.05rem}
+.apt-card .adet{font-size:.72rem;color:var(--ink3);margin-top:3px;line-height:1.5}
+.apt-card .aprice{font-size:.8rem;font-weight:700;color:var(--gold);margin-top:5px}
+
+/* result box */
+.res-box{border-radius:14px;padding:26px;text-align:center;margin-top:14px}
+.res-ok{background:var(--green-lt);border:2px solid var(--green)}
+.res-no{background:var(--red-lt);border:2px solid var(--red)}
+.res-neutral{background:var(--blue-lt);border:2px solid var(--blue)}
+.res-price{font-family:'DM Serif Display',serif;font-size:2.4rem;line-height:1;margin:8px 0 4px}
+.res-lbl{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:9px;font-size:.85rem;font-weight:600;z-index:999;opacity:0;transition:.3s;white-space:nowrap}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:840px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  main{padding:12px 14px}
+  header{height:auto;padding:8px 14px;flex-wrap:wrap;gap:6px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">נדל&quot;ן פרו</div>
+    <div class="login-sub">בחר משתמש להיכנס למערכת</div>
+    <div class="login-seg">
+      <button id="seg-mgr" class="on" onclick="setLoginTab('manager')">👔 מנהל מכירות</button>
+      <button id="seg-sal" onclick="setLoginTab('sales')">🤝 איש מכירות</button>
+    </div>
+    <div id="login-list"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" style="display:none">
+  <header>
+    <div class="logo">נדל&quot;ן פרו <span>PRO</span></div>
+    <nav id="nav"></nav>
+    <div class="fc" style="gap:8px">
+      <div id="role-switch" style="display:none">
+        <button id="switch-btn" onclick="switchRole()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.78rem;font-weight:700;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.18)'" onmouseout="this.style.background='rgba(255,255,255,.1)'"></button>
+      </div>
+      <div class="user-pill" onclick="logout()">
+        <div class="dot" id="u-dot"></div>
+        <span id="u-name"></span>
+        <span style="opacity:.4;font-size:.72rem">↩ יציאה</span>
+      </div>
+    </div>
+  </header>
+  <main id="content"></main>
+</div>
+
+<!-- ══ MODAL: NEW/EDIT PROJECT ══ -->
+<div class="ov" id="ov-project">
+  <div class="modal" style="width:500px">
+    <div class="modal-hd">
+      <h2 id="proj-modal-title">פרויקט חדש</h2>
+      <button class="bic" onclick="closeOv('ov-project')">✕</button>
+    </div>
+    <div class="g2 mb3">
+      <div class="fg" style="grid-column:span 2">
+        <label>שם הפרויקט *</label>
+        <input id="p-name" type="text" placeholder="למשל: פרויקט הגן רחובות" style="font-size:1rem;font-weight:700">
+      </div>
+      <div class="fg"><label>עיר / מיקום</label><input id="p-loc" type="text" placeholder="רחובות"></div>
+      <div class="fg"><label>יעד יחידות</label><input id="p-target" type="number" placeholder="20"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn bn" style="flex:1;padding:11px" onclick="saveProject()">✅ שמור פרויקט</button>
+      <button class="btn bgh" onclick="closeOv('ov-project')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ADD/EDIT APARTMENT ══ -->
+<div class="ov" id="ov-apt">
+  <div class="modal" style="width:540px">
+    <div class="modal-hd">
+      <h2 id="apt-modal-title">הוספת דירה</h2>
+      <button class="bic" onclick="closeOv('ov-apt')">✕</button>
+    </div>
+    <!-- project indicator -->
+    <div class="ib ib-b mb3" id="apt-proj-indicator"></div>
+
+    <div class="g3 mb3">
+      <div class="fg"><label>מספר דירה *</label><input id="a-num" type="text" placeholder="101" style="font-weight:700;font-size:1.05rem"></div>
+      <div class="fg"><label>קומה</label><input id="a-floor" type="number" placeholder="3"></div>
+      <div class="fg"><label>חדרים / טיפוס</label><input id="a-type" type="text" placeholder="4 חד'"></div>
+    </div>
+    <div class="g2 mb3">
+      <div class="fg"><label>שטח דירה (מ&quot;ר) *</label><input id="a-area" type="number" placeholder="100" oninput="aptPreview()" class="ho" style="font-size:1.05rem"></div>
+      <div class="fg"><label>חניות</label><input id="a-park" type="number" placeholder="1" value="1"></div>
+    </div>
+    <hr>
+    <div class="step-lbl mb2">💰 נתוני דוח אפס (מהבנק המלווה)</div>
+    <div class="g3 mb3">
+      <div class="fg">
+        <label>מחיר דוח אפס למ&quot;ר (₪) *</label>
+        <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview()" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700">
+        <div class="hint">הסכום שבנק נותן לכל מ&quot;ר</div>
+      </div>
+      <div class="fg">
+        <label>תוספות קבועות (₪)</label>
+        <input id="a-ext" type="number" placeholder="0" value="0" oninput="aptPreview()">
+        <div class="hint">חניה, מחסן, קירות, וכו'</div>
+      </div>
+      <div class="fg">
+        <label>מחיר שיווק / מחירון (₪)</label>
+        <input id="a-mkt" type="number" placeholder="3,500,000" oninput="aptPreview()" style="border-color:var(--gold-bd);background:var(--gold-lt);font-weight:700">
+        <div class="hint">ברוטו כולל מע&quot;מ</div>
+      </div>
+    </div>
+    <div id="apt-preview" class="ib ib-o" style="display:none;font-size:.8rem;line-height:1.8"></div>
+    <div class="modal-ft">
+      <button class="btn bn" style="flex:1;padding:11px;font-size:.9rem" onclick="saveApt()">✅ שמור דירה</button>
+      <button class="btn bgh" onclick="closeOv('ov-apt')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ADD USER ══ -->
+<div class="ov" id="ov-user">
+  <div class="modal" style="width:400px">
+    <div class="modal-hd">
+      <h2>הוספת משתמש</h2>
+      <button class="bic" onclick="closeOv('ov-user')">✕</button>
+    </div>
+    <div class="g2 mb3">
+      <div class="fg" style="grid-column:span 2"><label>שם מלא *</label><input id="u-new-name" type="text" placeholder="שם המשתמש"></div>
+      <div class="fg"><label>תפקיד</label>
+        <select id="u-new-role">
+          <option value="sales">איש מכירות</option>
+          <option value="manager">מנהל</option>
+        </select>
+      </div>
+      <div class="fg"><label>אמוג'י</label>
+        <div class="fc mt1" style="flex-wrap:wrap;gap:6px">
+          ${['👤','👨','👩','👨‍💼','👩‍💼','⭐','🤝','🔑','🏠','💼'].map(e=>`<span onclick="pickEmoji('${e}',this)" style="font-size:1.4rem;cursor:pointer;padding:3px;border-radius:5px;border:2px solid transparent;transition:.1s">${e}</span>`).join('')}
+        </div>
+        <input type="hidden" id="u-new-emoji" value="👤">
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn bn" style="flex:1" onclick="saveUser()">הוסף</button>
+      <button class="btn bgh" onclick="closeOv('ov-user')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: PRICELIST ══ -->
+<div class="ov" id="ov-price">
+  <div class="modal" style="width:860px;max-width:98vw">
+    <div class="modal-hd">
+      <h2>מחירון רשמי</h2>
+      <div class="fc">
+        <button class="btn bn bsm" onclick="window.print()">🖨️ הדפס</button>
+        <button class="btn bgh bsm" onclick="closeOv('ov-price')">סגור</button>
+      </div>
+    </div>
+    <div id="pricelist-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+//  STORAGE
+// ════════════════════════════════════════════
+const SK = { users:'re_u', cfg:'re_cfg', projects:'re_proj', apts:'re_apts', deals:'re_deals', sess:'re_sess' };
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{return d;} }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} }
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let users    = lsGet(SK.users,    [{id:'u1',name:'אבי כהן',role:'manager',emoji:'👔',color:'#a8720a'},{id:'u2',name:'דנה לוי',role:'sales',emoji:'⭐',color:'#0f5299'},{id:'u3',name:'משה פרץ',role:'sales',emoji:'🤝',color:'#186038'}]);
+let cfg      = lsGet(SK.cfg,      {premium:5,rate:7,vat:18,target:20});
+let projects = lsGet(SK.projects, []);
+let apts     = lsGet(SK.apts,     []);
+let deals    = lsGet(SK.deals,    []);
+let sess     = lsGet(SK.sess,     null);
+
+let me = null;          // current user
+let editProjId = null;  // project being edited
+let editAptProjId = null; // which project the apt belongs to
+let editAptId = null;
+
+// sales calculator state
+let svProj = null;
+let svApt  = null;
+let svPmts = [];
+
+let _charts = {};
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function fmt(n){ return '₪'+Number(n||0).toLocaleString('he-IL',{maximumFractionDigits:0}); }
+function mr(ann){ return Math.pow(1+ann/100,1/12)-1; }
+function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100)/Math.pow(1+r,p.months),0); }
+function bankFloor(apt){ return apt.area*apt.sqm+(apt.ext||0); }
+function targetNet(apt){ return bankFloor(apt)*(1+cfg.premium/100); }
+function floorGross(apt,pmts){ return targetNet(apt)/npvF(pmts,cfg.rate)*(1+cfg.vat/100); }
+function saveAll(){ lsSet(SK.users,users);lsSet(SK.cfg,cfg);lsSet(SK.projects,projects);lsSet(SK.apts,apts);lsSet(SK.deals,deals); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
+function openOv(id){ document.getElementById(id).classList.add('on'); }
+function closeOv(id){ document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('on'); }));
+
+// ════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════
+let loginTab = 'manager';
+function setLoginTab(t){
+  loginTab=t;
+  document.getElementById('seg-mgr').className=t==='manager'?'on':'';
+  document.getElementById('seg-sal').className=t==='sales'?'on':'';
+  renderLogin();
+}
+function renderLogin(){
+  const el=document.getElementById('login-list');
+  const list=users.filter(u=>u.role===loginTab);
+  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3);font-size:.83rem">אין משתמשים — כנס כמנהל קודם</div>'; return; }
+  el.innerHTML=list.map(u=>`
+    <div class="user-btn" onclick="doLogin('${u.id}')">
+      <div class="user-av" style="background:${u.color}22;color:${u.color}">${u.emoji}</div>
+      <div><div class="user-name">${u.name}</div><div class="user-role">${u.role==='manager'?'מנהל מכירות':'איש מכירות'}</div></div>
+      <div style="margin-right:auto;color:var(--ink3)">←</div>
+    </div>`).join('');
+}
+function doLogin(uid){
+  me=users.find(u=>u.id===uid);
+  if(!me) return;
+  lsSet(SK.sess,{uid});
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('app').style.display='block';
+  initApp();
+}
+function logout(){
+  me=null; lsSet(SK.sess,null);
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-wrap').style.display='flex';
+  svProj=null; svApt=null;
+  renderLogin();
+}
+
+// ════════════════════════════════════════════
+//  APP BOOT
+// ════════════════════════════════════════════
+function initApp(){
+  document.getElementById('u-dot').style.background=me.role==='manager'?'#e8c84a':'#6ee7b7';
+  document.getElementById('u-name').textContent=me.name+' ('+(me.role==='manager'?'מנהל':'מכירות')+')';
+  // Show switch button only if this user has manager role (owners can switch to sales view)
+  const sw = document.getElementById('role-switch');
+  const sb = document.getElementById('switch-btn');
+  if(me.role==='manager' && sw && sb){
+    sw.style.display='block';
+    sb.textContent='👁 עבור למבט איש מכירות';
+    sb.dataset.mode='manager'; // current mode
+  } else if(sw){
+    sw.style.display='none';
+  }
+  if(me.role==='manager') buildManager();
+  else buildSales();
+}
+
+function switchRole(){
+  const sb = document.getElementById('switch-btn');
+  if(!sb) return;
+  if(sb.dataset.mode==='manager'){
+    // switch to sales view
+    sb.dataset.mode='sales';
+    sb.textContent='🔧 חזור למנהל';
+    sb.style.background='rgba(110,231,183,.2)';
+    sb.style.borderColor='rgba(110,231,183,.4)';
+    document.getElementById('u-dot').style.background='#6ee7b7';
+    buildSales();
+  } else {
+    // switch back to manager view
+    sb.dataset.mode='manager';
+    sb.textContent='👁 עבור למבט איש מכירות';
+    sb.style.background='rgba(255,255,255,.1)';
+    sb.style.borderColor='rgba(255,255,255,.2)';
+    document.getElementById('u-dot').style.background='#e8c84a';
+    buildManager();
+  }
+}
+
+// ════════════════════════════════════════════
+// ███  MANAGER APP
+// ════════════════════════════════════════════
+function buildManager(){
+  document.getElementById('nav').innerHTML=`
+    <button class="on" onclick="showTab('dash',this)">דשבורד</button>
+    <button onclick="showTab('projects',this)">פרויקטים</button>
+    <button onclick="showTab('deals',this)">עסקאות<span id="pnd-badge" class="nb" style="display:none">0</span></button>
+    <button onclick="showTab('users',this)">משתמשים</button>
+    <button onclick="showTab('calc',this)">מחשבון</button>`;
+
+  document.getElementById('content').innerHTML=`
+  <!-- DASHBOARD -->
+  <div class="tab on" id="tab-dash">
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-lbl">מכירות מאושרות</div><div class="kpi-val cg" id="k1">0</div><div class="kpi-sub" id="k1s"></div></div>
+      <div class="kpi"><div class="kpi-lbl">ממתינות אישור</div><div class="kpi-val corange" id="k2">0</div><div class="kpi-sub">חריגות מחיר</div></div>
+      <div class="kpi"><div class="kpi-lbl">עמידה ביעד</div><div class="kpi-val cgreen" id="k3">0%</div><div class="kpi-sub" id="k3s"></div></div>
+      <div class="kpi"><div class="kpi-lbl">NPV עודף ממוצע</div><div class="kpi-val cblue" id="k4">0%</div><div class="kpi-sub">מעל יעד</div></div>
+      <div class="kpi"><div class="kpi-lbl">פרויקטים פעילים</div><div class="kpi-val cg" id="k5">0</div><div class="kpi-sub">פרויקטים</div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-hd"><h3>מכירות vs יעד</h3></div><div class="ch"><canvas id="cbar"></canvas></div></div>
+      <div class="card"><div class="card-hd"><h3>פריסת תשלומים ממוצעת</h3></div><div class="ch"><canvas id="cdough"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-hd"><h3>עסקאות אחרונות</h3></div><div id="recent"></div></div>
+  </div>
+
+  <!-- PROJECTS TAB -->
+  <div class="tab" id="tab-projects">
+    <div class="fb mb4">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.3rem">פרויקטים ודירות</div>
+      <button class="btn bn" onclick="openProjectModal(null)">+ פרויקט חדש</button>
+    </div>
+
+    <!-- Global config -->
+    <div class="card mb3">
+      <div class="card-hd"><h3>הגדרות גלובליות</h3></div>
+      <div class="g4">
+        <div class="fg"><label>% רווח יעד (מעל דוח אפס)</label><input type="number" id="c-prem" value="${cfg.premium}" step=".5" oninput="saveCfg()"><div class="hint">רצפת מינימום לכל עסקה</div></div>
+        <div class="fg"><label>ריבית היוון שנתית (%)</label><input type="number" id="c-rate" value="${cfg.rate}" step=".5" oninput="saveCfg()"></div>
+        <div class="fg"><label>מע&quot;מ (%)</label><input type="number" id="c-vat" value="${cfg.vat}" step=".5" oninput="saveCfg()"></div>
+        <div class="fg"><label>יעד מכירות (יחידות)</label><input type="number" id="c-tgt" value="${cfg.target}" oninput="saveCfg()"></div>
+      </div>
+    </div>
+
+    <div id="projects-list"></div>
+  </div>
+
+  <!-- DEALS TAB -->
+  <div class="tab" id="tab-deals">
+    <div class="fb mb4"><div style="font-family:'DM Serif Display',serif;font-size:1.3rem">עסקאות</div></div>
+    <div class="kpi-row mb3" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi" style="background:var(--ink);color:#fff">
+        <div class="kpi-lbl" style="color:rgba(255,255,255,.4)">סה"כ הכנסות מאושרות</div>
+        <div class="kpi-val" style="color:#e8c84a;font-size:1.4rem" id="d-rev">₪0</div>
+      </div>
+      <div class="kpi"><div class="kpi-lbl">עסקאות מאושרות</div><div class="kpi-val cgreen" id="d-app">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">ממתינות לאישור</div><div class="kpi-val corange" id="d-pnd">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">NPV עודף מצטבר</div><div class="kpi-val cblue" id="d-excess">₪0</div></div>
+    </div>
+    <div class="card"><div id="deals-tbl"></div></div>
+  </div>
+
+  <!-- USERS TAB -->
+  <div class="tab" id="tab-users">
+    <div class="fb mb4">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.3rem">ניהול משתמשים</div>
+      <button class="btn bn" onclick="openOv('ov-user')">+ משתמש חדש</button>
+    </div>
+    <div id="users-list"></div>
+  </div>
+
+  <!-- CALCULATOR TAB -->
+  <div class="tab" id="tab-calc">
+    <div class="fb mb4">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.3rem">מחשבון תמחור לקוח</div>
+      <div class="ib ib-b s" style="padding:6px 12px">בחר פרויקט → דירה → פריסה → קבל מחיר סגירה</div>
+    </div>
+
+    <div class="g2" style="align-items:start">
+
+      <!-- LEFT COLUMN: selections -->
+      <div>
+        <!-- STEP 1: PROJECT -->
+        <div class="card mb3">
+          <div class="card-hd"><h3>1 — פרויקט</h3></div>
+          <div id="calc-proj-grid" class="proj-cards"></div>
+        </div>
+
+        <!-- STEP 2: APT -->
+        <div class="card mb3" id="calc-s2" style="display:none">
+          <div class="card-hd">
+            <h3>2 — דירה</h3>
+            <span id="calc-proj-badge" class="bdg bdg-b"></span>
+          </div>
+          <div id="calc-apt-grid" class="apt-cards"></div>
+        </div>
+
+        <!-- STEP 3: SPREAD -->
+        <div class="card mb3" id="calc-s3" style="display:none">
+          <div class="card-hd">
+            <h3>3 — פריסת תשלומים</h3>
+            <div id="calc-pmt-total" class="bdg bdg-gr">0%</div>
+          </div>
+          <div id="calc-pmts-list"></div>
+          <button class="btn bgh bsm mt2" onclick="addCalcPmt()">+ פעימה</button>
+          <div class="ib ib-o mt3 s">ריבית היוון: <strong id="calc-rate-lbl">${cfg.rate}%</strong> שנתי</div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: result -->
+      <div>
+        <!-- apt info card -->
+        <div class="card mb3" id="calc-apt-info" style="display:none">
+          <div class="card-hd"><h3>פרטי הדירה</h3></div>
+          <div id="calc-apt-details"></div>
+        </div>
+
+        <!-- FLOOR RESULT -->
+        <div id="calc-result" style="display:none">
+
+          <!-- HERO: הנחה מקסימלית -->
+          <div style="background:linear-gradient(135deg,#0f4d2a 0%,#1a6b42 100%);border-radius:16px;padding:28px 22px;text-align:center;margin-bottom:12px;box-shadow:0 6px 24px rgba(24,96,56,.25)">
+            <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:rgba(255,255,255,.45);margin-bottom:8px">הנחה מקסימלית לפריסה זו</div>
+            <div id="calc-discount-pct" style="font-family:'DM Serif Display',serif;font-size:5.5rem;line-height:1;color:#fff;letter-spacing:-3px">—</div>
+            <div id="calc-discount-amt" style="font-size:.9rem;color:rgba(255,255,255,.6);margin-top:6px;font-weight:600"></div>
+            <div style="margin-top:16px;padding-top:13px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.4)">
+              מחיר סגירה מינימלי: <strong id="calc-floor-price" style="color:rgba(255,255,255,.65)">—</strong>
+              &nbsp;|&nbsp; מחירון: <strong id="calc-mkt-price" style="color:rgba(255,255,255,.5)">—</strong>
+            </div>
+          </div>
+
+          <!-- offer check -->
+          <div class="card mb3">
+            <div class="card-hd"><h3>הצעת לקוח — בדיקה</h3></div>
+            <div class="fg hi mb3">
+              <label>מחיר שהלקוח מציע (ברוטו כולל מע"מ)</label>
+              <input type="number" id="calc-offer" placeholder="הזן מחיר הצעה..." oninput="calcCheckOffer()" style="font-size:1.1rem">
+            </div>
+            <div id="calc-offer-res"></div>
+          </div>
+
+          <!-- breakdown -->
+          <div class="card">
+            <div class="card-hd"><h3>פירוט פעימות (NPV)</h3></div>
+            <div id="calc-breakdown"></div>
+            <div class="ib ib-o mt3 s bold" id="calc-summary"></div>
+          </div>
+        </div>
+
+        <!-- placeholder before selection -->
+        <div id="calc-placeholder" class="card" style="text-align:center;padding:48px 24px">
+          <div style="font-size:2.5rem;margin-bottom:12px">🏗️</div>
+          <div class="bold mb2">בחר פרויקט ודירה</div>
+          <div class="dim s">לאחר הבחירה תראה את ההנחה המקסימלית ומחיר הסגירה</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+
+  renderAll();
+}
+
+function renderAll(){
+  renderDash();
+  renderProjects();
+  renderDeals();
+  renderUsers();
+  renderDCF();
+}
+
+// ────────────────────────────────────────────
+//  DASHBOARD
+// ────────────────────────────────────────────
+function renderDash(){
+  const app=deals.filter(d=>d.status==='APP');
+  const pnd=deals.filter(d=>d.status==='PND');
+  const rev=app.reduce((a,d)=>a+d.gross,0);
+  const tpct=cfg.target?Math.round(app.length/cfg.target*100):0;
+  const avgEx=app.length?app.reduce((a,d)=>a+(d.tNet?d.excess/d.tNet*100:0),0)/app.length:0;
+
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('k1',app.length); s('k1s',fmt(rev));
+  s('k2',pnd.length);
+  s('k3',tpct+'%'); s('k3s',app.length+'/'+cfg.target+' יח\'');
+  s('k4',(avgEx>=0?'+':'')+avgEx.toFixed(1)+'%');
+  s('k5',projects.length);
+
+  const pb=document.getElementById('pnd-badge');
+  if(pb){pb.textContent=pnd.length;pb.style.display=pnd.length?'inline-flex':'none';}
+
+  // Bar
+  const bc=document.getElementById('cbar');
+  if(bc){if(_charts.bar)_charts.bar.destroy();_charts.bar=new Chart(bc,{type:'bar',data:{labels:['פרויקט'],datasets:[{label:'מאושרות',data:[app.length],backgroundColor:'#a8720a',borderRadius:5},{label:'ממתינות',data:[pnd.length],backgroundColor:'#b55c08',borderRadius:5},{label:'יעד',data:[cfg.target],backgroundColor:'rgba(15,82,153,.1)',borderRadius:5,borderColor:'#0f5299',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#999088',font:{family:'Heebo'}}}},scales:{x:{ticks:{color:'#999088'},grid:{color:'rgba(0,0,0,.04)'}},y:{ticks:{color:'#999088'},grid:{color:'rgba(0,0,0,.04)'},beginAtZero:true}}}});}
+
+  // Dough
+  const dc=document.getElementById('cdough');
+  if(dc){if(_charts.dough)_charts.dough.destroy();const sp=deals.length?[deals.reduce((a,d)=>a+(d.pmts[0]?.pct||0),0)/deals.length,deals.reduce((a,d)=>a+(d.pmts[1]?.pct||0),0)/deals.length,deals.reduce((a,d)=>a+(d.pmts[2]?.pct||0),0)/deals.length]:[20,60,20];_charts.dough=new Chart(dc,{type:'doughnut',data:{labels:['פעימה 1','פעימה 2','פעימה 3'],datasets:[{data:sp,backgroundColor:['#a8720a','#0f5299','#186038'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#55504a',font:{family:'Heebo'},padding:12}}}}});}
+
+  // Recent
+  const re=document.getElementById('recent');
+  if(!re) return;
+  const recent=[...deals].sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5);
+  if(!recent.length){re.innerHTML='<div class="empty">אין עסקאות</div>';return;}
+  re.innerHTML=`<table><thead><tr><th>פרויקט</th><th>דירה</th><th>איש מכירות</th><th>סטטוס</th><th>ברוטו</th><th>NPV עודף</th><th>תאריך</th></tr></thead><tbody>
+  ${recent.map(d=>{const seller=users.find(u=>u.id===d.userId);return`<tr>
+    <td class="dim xs">${d.projName||'—'}</td>
+    <td><span class="bold">${d.aptNum}</span> <span class="dim xs">${d.aptType}</span></td>
+    <td>${seller?seller.emoji+' '+seller.name:'—'}</td>
+    <td><span class="bdg ${d.status==='APP'?'bdg-g':'bdg-or'}">${d.status==='APP'?'מאושר':'ממתין'}</span></td>
+    <td class="bold">${fmt(d.gross)}</td>
+    <td class="${d.excess>=0?'cgreen':'cred'} bold">${d.excess>=0?'+':''}${fmt(d.excess)}</td>
+    <td class="dim">${d.date}</td>
+  </tr>`}).join('')}</tbody></table>`;
+}
+
+// ────────────────────────────────────────────
+//  PROJECTS LIST
+// ────────────────────────────────────────────
+function renderProjects(){
+  const el=document.getElementById('projects-list');
+  if(!el) return;
+  if(!projects.length){
+    el.innerHTML=`<div class="card"><div class="empty">
+      <div style="font-size:2rem;margin-bottom:10px">🏗️</div>
+      <div style="font-weight:700;margin-bottom:6px">אין פרויקטים עדיין</div>
+      <div class="dim s">לחץ על "פרויקט חדש" כדי להתחיל</div>
+    </div></div>`;
+    return;
+  }
+
+  el.innerHTML = projects.map(p=>{
+    const projApts = apts.filter(a=>a.projId===p.id);
+    const sold     = projApts.filter(a=>a.sold).length;
+    const avail    = projApts.filter(a=>!a.sold).length;
+    const f        = npvF(p.payments, cfg.rate);
+    return `
+    <div class="card mb3">
+      <div class="card-hd">
+        <div class="fc">
+          <h3>${p.name}</h3>
+          ${p.loc?`<span class="bdg bdg-gr">${p.loc}</span>`:''}
+          <span class="bdg bdg-b">${projApts.length} דירות</span>
+          <span class="bdg bdg-g">${avail} פנויות</span>
+          ${sold?`<span class="bdg bdg-or">${sold} נמכרו</span>`:''}
+        </div>
+        <div class="fc">
+          <button class="btn bgh bsm" onclick="openPricelist('${p.id}')">📄 מחירון</button>
+          <button class="btn bgh bsm" onclick="openAptModal('${p.id}',null)">+ הוסף דירה</button>
+          <button class="bic" onclick="openProjectModal('${p.id}')">✏️</button>
+          <button class="bic" onclick="delProject('${p.id}')">🗑</button>
+        </div>
+      </div>
+
+      <!-- Apt table -->
+      ${projApts.length ? `
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח מ"ר</th>
+            <th>דוח אפס נטו</th><th>יעד נטו (+${cfg.premium}%)</th>
+            <th>רצפה ברוטו <span class="vat">+מע"מ</span></th>
+            <th>מחירון</th><th>מרווח</th><th>סטטוס</th><th></th>
+          </tr></thead>
+          <tbody>
+          ${projApts.map(a=>{
+            const bf  = bankFloor(a);
+            const tN  = targetNet(a);
+            const flr = floorGross(a, p.payments);
+            const buf = a.mkt ? a.mkt-flr : 0;
+            return `<tr>
+              <td class="bold">${a.num}</td>
+              <td>${a.floor}</td>
+              <td>${a.type||'—'}</td>
+              <td>${a.area}</td>
+              <td>${fmt(bf)}</td>
+              <td class="corange bold">${fmt(tN)}</td>
+              <td class="cred bold">${fmt(flr)}</td>
+              <td class="bold">${a.mkt?fmt(a.mkt):'—'}</td>
+              <td>${a.mkt?`<span class="bdg ${buf>=0?'bdg-g':'bdg-r'}">${fmt(buf)}</span>`:'—'}</td>
+              <td><span class="bdg ${a.sold?'bdg-or':'bdg-g'}">${a.sold?'נמכרה':'פנויה'}</span></td>
+              <td class="fc">
+                <button class="bic" onclick="openAptModal('${p.id}','${a.id}')">✏️</button>
+                <button class="bic" onclick="delApt('${a.id}')">🗑</button>
+              </td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>` : `<div class="ib ib-or s mt2">אין דירות בפרויקט — לחץ "הוסף דירה" להתחיל</div>`}
+
+
+    </div>`;
+  }).join('');
+}
+
+// ────────────────────────────────────────────
+//  PROJECT MODAL
+// ────────────────────────────────────────────
+function openProjectModal(id){
+  editProjId = id;
+  const p = id ? projects.find(x=>x.id===id) : null;
+  document.getElementById('proj-modal-title').textContent = id ? 'עריכת פרויקט' : 'פרויקט חדש';
+  document.getElementById('p-name').value = p?.name||'';
+  document.getElementById('p-loc').value  = p?.loc||'';
+  document.getElementById('p-target').value = p?.target||'';
+  openOv('ov-project');
+}
+
+function saveProject(){
+  const name=document.getElementById('p-name').value.trim();
+  if(!name){ toast('חובה להזין שם פרויקט'); return; }
+  const proj={
+    id: editProjId||uid(),
+    name,
+    loc: document.getElementById('p-loc').value.trim(),
+    target: +document.getElementById('p-target').value||0,
+    payments: []
+  };
+  if(editProjId) projects=projects.map(x=>x.id===editProjId?proj:x);
+  else projects.push(proj);
+  editProjId=null;
+  saveAll();
+  closeOv('ov-project');
+  renderProjects();
+  renderDash();
+  toast('פרויקט נשמר');
+}
+function delProject(id){
+  if(apts.find(a=>a.projId===id)){ toast('יש דירות בפרויקט — מחק אותן קודם'); return; }
+  if(!confirm('למחוק פרויקט?')) return;
+  projects=projects.filter(p=>p.id!==id);
+  saveAll(); renderProjects(); renderDash();
+}
+
+// ────────────────────────────────────────────
+//  APARTMENT MODAL
+// ────────────────────────────────────────────
+function openAptModal(projId, aptId){
+  editAptProjId = projId;
+  editAptId     = aptId;
+  const a = aptId ? apts.find(x=>x.id===aptId) : null;
+  const p = projects.find(x=>x.id===projId);
+  document.getElementById('apt-modal-title').textContent = aptId ? 'עריכת דירה' : 'הוספת דירה לפרויקט';
+  document.getElementById('apt-proj-indicator').textContent = p ? 'פרויקט: ' + p.name : '';
+  document.getElementById('a-num').value   = a?.num||'';
+  document.getElementById('a-floor').value = a?.floor||'';
+  document.getElementById('a-type').value  = a?.type||"4 חד'";
+  document.getElementById('a-area').value  = a?.area||'';
+  document.getElementById('a-park').value  = a?.park||1;
+  document.getElementById('a-sqm').value   = a?.sqm||'';
+  document.getElementById('a-ext').value   = a?.ext||0;
+  document.getElementById('a-mkt').value   = a?.mkt||'';
+  document.getElementById('apt-preview').style.display='none';
+  openOv('ov-apt');
+}
+function aptPreview(){
+  const area=+document.getElementById('a-area').value;
+  const sqm =+document.getElementById('a-sqm').value;
+  const ext =+document.getElementById('a-ext').value||0;
+  const mkt =+document.getElementById('a-mkt').value;
+  const box =document.getElementById('apt-preview');
+  if(!area||!sqm){ box.style.display='none'; return; }
+  const p   = projects.find(x=>x.id===editAptProjId);
+  const pmts= p?.payments||[{pct:20,months:0},{pct:80,months:36}];
+  const bf  = area*sqm+ext;
+  const tN  = bf*(1+cfg.premium/100);
+  const flr = tN/npvF(pmts,cfg.rate)*(1+cfg.vat/100);
+  const buf = mkt ? mkt-flr : 0;
+  box.style.display='block';
+  box.innerHTML=`
+    <strong>דוח אפס נטו:</strong> ${fmt(bf)} &nbsp;→&nbsp;
+    <strong>יעד נטו (+${cfg.premium}%):</strong> ${fmt(tN)} &nbsp;→&nbsp;
+    <span style="color:var(--red);font-weight:800">רצפת מכירה: ${fmt(flr)}</span>
+    ${mkt?` &nbsp;|&nbsp; <span style="color:var(--green);font-weight:800">מרווח מחירון: ${fmt(buf)} (${(buf/mkt*100).toFixed(1)}%)</span>`:''}`;
+}
+function saveApt(){
+  const num  = document.getElementById('a-num').value.trim();
+  const area = +document.getElementById('a-area').value;
+  const sqm  = +document.getElementById('a-sqm').value;
+  if(!num)  { toast('חובה: מספר דירה'); return; }
+  if(!area) { toast('חובה: שטח דירה'); return; }
+  if(!sqm)  { toast('חובה: מחיר דוח אפס למ"ר'); return; }
+  const apt={
+    id:    editAptId||uid(),
+    projId: editAptProjId,
+    num,
+    floor: +document.getElementById('a-floor').value||0,
+    type:   document.getElementById('a-type').value,
+    area,
+    park:  +document.getElementById('a-park').value||1,
+    sqm,
+    ext:   +document.getElementById('a-ext').value||0,
+    mkt:   +document.getElementById('a-mkt').value||0,
+    sold:   editAptId ? (apts.find(a=>a.id===editAptId)?.sold||false) : false,
+  };
+  if(editAptId) apts=apts.map(a=>a.id===editAptId?apt:a);
+  else apts.push(apt);
+  saveAll();
+  closeOv('ov-apt');
+  renderProjects();
+  renderDash();
+  toast('דירה '+num+' נשמרה');
+}
+function delApt(id){
+  if(deals.find(d=>d.aptId===id)){ toast('קיימות עסקאות לדירה — לא ניתן למחוק'); return; }
+  if(!confirm('למחוק דירה?')) return;
+  apts=apts.filter(a=>a.id!==id);
+  saveAll(); renderProjects(); renderDash();
+}
+
+// ────────────────────────────────────────────
+//  DEALS
+// ────────────────────────────────────────────
+function renderDeals(){
+  const app=deals.filter(d=>d.status==='APP');
+  const pnd=deals.filter(d=>d.status==='PND');
+  const exc=deals.reduce((a,d)=>a+d.excess,0);
+  const totalRev=app.reduce((a,d)=>a+d.gross,0);
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const totalRevKpi=app.reduce((a,d)=>a+d.gross,0);
+  s('d-excess',fmt(exc)); s('d-app',app.length); s('d-pnd',pnd.length); s('d-rev',fmt(totalRevKpi));
+  const pb=document.getElementById('pnd-badge');
+  if(pb){pb.textContent=pnd.length;pb.style.display=pnd.length?'inline-flex':'none';}
+
+  const el=document.getElementById('deals-tbl');
+  if(!el) return;
+  if(!deals.length){el.innerHTML='<div class="empty dim" style="padding:40px;text-align:center">אין עסקאות עדיין</div>';return;}
+
+  // sort: pending first, then approved
+  const sorted=[...deals].sort((a,b)=>(a.status==='PND'?0:1)-(b.status==='PND'?0:1));
+
+  el.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>סטטוס</th><th>פרויקט</th><th>דירה</th><th>איש מכירות</th>
+      <th>מחיר סגירה</th><th>הנחה שניתנה</th><th>פריסה</th><th>תאריך</th><th></th>
+    </tr></thead>
+    <tbody>${sorted.map(d=>{
+      const seller=users.find(u=>u.id===d.userId);
+      const isPnd = d.status==='PND';
+      return`<tr style="${isPnd?'background:#fffbf0':''}">
+        <td>
+          <span class="bdg ${isPnd?'bdg-or':'bdg-g'}">${isPnd?'⏳ ממתין לאישור':'✅ מאושר'}</span>
+        </td>
+        <td class="dim xs">${d.projName||'—'}</td>
+        <td><strong>דירה ${d.aptNum}</strong><br><span class="dim xs">${d.aptType}</span></td>
+        <td>${seller?seller.emoji+' '+seller.name:'—'}</td>
+        <td><strong style="font-size:1.05rem">${fmt(d.gross)}</strong></td>
+        <td>
+          ${d.discAmt?`<div class="bold cred" style="font-size:1rem">${fmt(d.discAmt)}</div>
+          <div class="dim xs">${d.discPct}% מהמחירון</div>`:'<span class="dim xs">—</span>'}
+        </td>
+        <td class="xs dim">${d.pmts.map(p=>`${p.pct}% / ${p.months}m`).join('<br>')}</td>
+        <td class="dim xs">${d.date}</td>
+        <td>
+          <div class="fc" style="gap:5px">
+            ${isPnd?`<button class="btn bgreen bsm" onclick="approveD('${d.id}')">✓ אשר</button>`:''}
+            <button class="btn bdel" onclick="deleteD('${d.id}')" title="${isPnd?'מחק עסקה':'בטל עסקה — הדירה תחזור לפנויות'}">${isPnd?'✕':'↩ בטל'}</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr style="background:#f5f3ee">
+      <td colspan="4" style="padding:10px;font-weight:700;font-size:.83rem">סה"כ מאושרות</td>
+      <td style="padding:10px;font-weight:800;font-size:1rem;color:var(--green)">${fmt(totalRev)}</td>
+      <td colspan="4"></td>
+    </tr></tfoot>
+  </table></div>`;
+}
+function approveD(id){ deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d); saveAll(); renderDeals(); renderDash(); toast('עסקה אושרה'); }
+function deleteD(id){
+  // manager-only: cancel deal (restore apt to available)
+  const d=deals.find(x=>x.id===id);
+  if(!d) return;
+  const aptInfo = d.aptNum ? 'דירה '+d.aptNum+' — '+d.projName : '';
+  const wasApproved = d.status==='APP';
+  const confirmMsg = wasApproved
+    ? 'ביטול עסקה מאושרת\n'+aptInfo+'\n\nהדירה תחזור לרשימת הדירות הפנויות. האם להמשיך?'
+    : 'מחיקת עסקה ממתינה\n'+aptInfo+'\n\nהדירה תחזור לרשימת הדירות הפנויות. האם להמשיך?';
+  if(!confirm(confirmMsg)) return;
+  // restore apt to available
+  const a=apts.find(x=>x.id===d.aptId);
+  if(a){ a.sold=false; }
+  deals=deals.filter(x=>x.id!==id);
+  saveAll(); renderDeals(); renderDash();
+  toast(wasApproved ? '↩ עסקה בוטלה — הדירה חזרה לפנויות' : '🗑 עסקה נמחקה');
+}
+
+// ────────────────────────────────────────────
+//  USERS
+// ────────────────────────────────────────────
+function renderUsers(){
+  const el=document.getElementById('users-list');
+  if(!el) return;
+  const mgr=users.filter(u=>u.role==='manager');
+  const sal=users.filter(u=>u.role==='sales');
+  const card=u=>{
+    const dc=deals.filter(d=>d.userId===u.id).length;
+    return`<div style="background:#faf8f4;border:1px solid var(--border);border-radius:9px;padding:13px 15px;display:flex;align-items:center;gap:11px">
+      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:${u.color}22;color:${u.color};flex-shrink:0">${u.emoji}</div>
+      <div style="flex:1"><div class="bold">${u.name}</div><div class="dim xs">${u.role==='manager'?'מנהל':'איש מכירות'} • ${dc} עסקאות</div></div>
+      ${u.id===me.id?'<span class="bdg bdg-o">אתה</span>':`<button class="bic" onclick="delUser('${u.id}')">🗑</button>`}
+    </div>`;
+  };
+  el.innerHTML=`
+    <div class="bold s mb2">מנהלים</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;margin-bottom:20px">${mgr.map(card).join('')}</div>
+    <div class="bold s mb2">אנשי מכירות</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px">${sal.map(card).join('')}</div>`;
+}
+function pickEmoji(e,el){
+  document.getElementById('u-new-emoji').value=e;
+  document.querySelectorAll('#ov-user span[onclick]').forEach(s=>s.style.border='2px solid transparent');
+  el.style.border='2px solid var(--gold)';
+}
+function saveUser(){
+  const name=document.getElementById('u-new-name').value.trim();
+  if(!name){toast('הזן שם');return;}
+  const cols=['#a8720a','#0f5299','#186038','#a82820','#b55c08','#6d28d9'];
+  users.push({id:uid(),name,role:document.getElementById('u-new-role').value,emoji:document.getElementById('u-new-emoji').value,color:cols[users.length%cols.length]});
+  saveAll(); closeOv('ov-user'); renderUsers(); toast('משתמש נוסף');
+}
+function delUser(id){if(!confirm('למחוק משתמש?'))return;users=users.filter(u=>u.id!==id);saveAll();renderUsers();}
+
+// ────────────────────────────────────────────
+//  CONFIG
+// ────────────────────────────────────────────
+function saveCfg(){
+  const g=(id)=>+document.getElementById(id)?.value;
+  cfg={...cfg,premium:g('c-prem')||cfg.premium,rate:g('c-rate')||cfg.rate,vat:g('c-vat')||cfg.vat,target:g('c-tgt')||cfg.target};
+  saveAll(); renderProjects(); renderDash();
+}
+
+// ────────────────────────────────────────────
+//  PRICELIST
+// ────────────────────────────────────────────
+function openPricelist(projId){
+  const p=projects.find(x=>x.id===projId);
+  if(!p) return;
+  const projApts=apts.filter(a=>a.projId===projId).sort((a,b)=>a.floor-b.floor);
+  const f=npvF(p.payments,cfg.rate);
+  document.getElementById('pricelist-body').innerHTML=`
+    <div style="text-align:center;padding:16px 0 20px;border-bottom:2px solid var(--border)">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.8rem">${p.name}</div>
+      ${p.loc?`<div class="dim s mt1">${p.loc}</div>`:''}
+      <div class="dim xs mt2">${new Date().toLocaleDateString('he-IL')} | NPV Factor: ${f.toFixed(4)}</div>
+    </div>
+    <div class="tbl-wrap mt3"><table>
+      <thead><tr><th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח מ"ר</th><th>חניות</th><th style="color:var(--gold)">מחיר שיווק</th></tr></thead>
+      <tbody>${projApts.map(a=>`<tr>
+        <td class="bold">${a.num}</td><td>${a.floor}</td><td>${a.type||'—'}</td><td>${a.area}</td><td>${a.park}</td>
+        <td class="bold corange" style="font-size:1.05rem">${a.mkt?fmt(a.mkt):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div class="dim xs" style="text-align:center;margin-top:14px">* המחירים כוללים מע"מ כחוק • ט.ל.ח</div>`;
+  openOv('ov-price');
+}
+
+// ────────────────────────────────────────────
+//  MANAGER CALCULATOR (project → apt → spread → result)
+// ────────────────────────────────────────────
+let calcProj = null;
+let calcApt  = null;
+let calcPmts = [];
+
+function renderDCF(){
+  // entry point when tab opens — render project cards
+  renderCalcProjects();
+}
+
+function renderCalcProjects(){
+  const grid = document.getElementById('calc-proj-grid');
+  if(!grid) return;
+  const rl = document.getElementById('calc-rate-lbl');
+  if(rl) rl.textContent = cfg.rate + '%';
+  if(!projects.length){
+    grid.innerHTML = '<div class="ib ib-or s">אין פרויקטים — צור פרויקט בלשונית הפרויקטים</div>';
+    return;
+  }
+  grid.innerHTML = projects.map(p => {
+    const cnt = apts.filter(a=>a.projId===p.id && !a.sold).length;
+    const sel = calcProj?.id === p.id;
+    return `<div class="proj-card${sel?' sel':''}" onclick="selectCalcProj('${p.id}')">
+      <div class="pname">${p.name}</div>
+      <div class="ploc">${p.loc||''}</div>
+      <div class="pcnt ${cnt?'cgreen':'dim'}">${cnt} דירות פנויות</div>
+    </div>`;
+  }).join('');
+}
+
+function selectCalcProj(id){
+  calcProj = projects.find(p=>p.id===id);
+  calcApt  = null;
+  const s2 = document.getElementById('calc-s2');
+  const s3 = document.getElementById('calc-s3');
+  const res = document.getElementById('calc-result');
+  const ph  = document.getElementById('calc-placeholder');
+  const info= document.getElementById('calc-apt-info');
+  if(s2)  s2.style.display  = 'block';
+  if(s3)  s3.style.display  = 'none';
+  if(res) res.style.display = 'none';
+  if(ph)  ph.style.display  = 'block';
+  if(info)info.style.display= 'none';
+  const badge = document.getElementById('calc-proj-badge');
+  if(badge) badge.textContent = calcProj.name;
+  renderCalcProjects();
+  renderCalcApts();
+}
+
+function renderCalcApts(){
+  const grid = document.getElementById('calc-apt-grid');
+  const noA  = document.getElementById('calc-no-apt');
+  if(!grid || !calcProj) return;
+  const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold);
+  if(!avail.length){
+    grid.innerHTML = '<div class="ib ib-or s">אין דירות פנויות בפרויקט</div>';
+    return;
+  }
+  grid.innerHTML = avail.map(a => {
+    const sel = calcApt?.id === a.id;
+    return `<div class="apt-card${sel?' sel':''}" onclick="selectCalcApt('${a.id}')">
+      <div class="anum">דירה ${a.num}</div>
+      <div class="adet">קומה ${a.floor} | ${a.type||'—'}<br>${a.area} מ"ר${a.park?' | '+a.park+' חניות':''}</div>
+      ${a.mkt ? '<div class="aprice">'+fmt(a.mkt)+'</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectCalcApt(id){
+  calcApt  = apts.find(a=>a.id===id);
+  if(!calcApt || !calcProj) return;
+  // load project default payments
+  calcPmts = [{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+  const s3   = document.getElementById('calc-s3');
+  const res  = document.getElementById('calc-result');
+  const ph   = document.getElementById('calc-placeholder');
+  const info = document.getElementById('calc-apt-info');
+  if(s3)  s3.style.display  = 'block';
+  if(ph)  ph.style.display  = 'none';
+  if(info)info.style.display= 'block';
+  renderCalcApts();
+  // Show apt details
+  const det = document.getElementById('calc-apt-details');
+  if(det){
+    const bf = bankFloor(calcApt);
+    const tN = targetNet(calcApt);
+    det.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.83rem">
+        <div><span class="dim">דירה</span><br><strong style="font-size:1.05rem">מספר ${calcApt.num}</strong></div>
+        <div><span class="dim">קומה</span><br><strong>${calcApt.floor}</strong></div>
+        <div><span class="dim">טיפוס</span><br><strong>${calcApt.type||'—'}</strong></div>
+        <div><span class="dim">שטח</span><br><strong>${calcApt.area} מ"ר</strong></div>
+        <div><span class="dim">דוח אפס נטו</span><br><strong>${fmt(bf)}</strong></div>
+        <div><span class="dim">יעד נטו (+${cfg.premium}%)</span><br><strong class="corange">${fmt(tN)}</strong></div>
+        ${calcApt.mkt?'<div style="grid-column:span 2"><span class="dim">מחיר שיווק</span><br><strong class="cg" style="font-size:1.1rem">'+fmt(calcApt.mkt)+'</strong></div>':''}
+      </div>`;
+  }
+  renderCalcPmts();
+  runCalc();
+}
+
+function renderCalcPmts(){
+  const el = document.getElementById('calc-pmts-list');
+  if(!el) return;
+  el.innerHTML = calcPmts.map((p,i) => `
+    <div class="fc mb2" style="gap:8px">
+      <div class="fg" style="flex:2"><label>תיאור</label><input type="text" value="${p.label||''}" oninput="calcPmts[${i}].label=this.value"></div>
+      <div class="fg" style="flex:1"><label>%</label><input type="number" value="${p.pct}" oninput="calcPmts[${i}].pct=+this.value;calcPmtTotal();runCalc()"></div>
+      <div class="fg" style="flex:1.2"><label>חודשים</label><input type="number" value="${p.months}" oninput="calcPmts[${i}].months=+this.value;runCalc()"></div>
+      <div style="align-self:flex-end"><button class="btn bdel bsm" onclick="calcPmts.splice(${i},1);renderCalcPmts();runCalc()">✕</button></div>
+    </div>`).join('');
+  calcPmtTotal();
+}
+function addCalcPmt(){ calcPmts.push({label:'תשלום '+(calcPmts.length+1),pct:0,months:12}); renderCalcPmts(); }
+function calcPmtTotal(){
+  const t = calcPmts.reduce((a,p)=>a+p.pct,0);
+  const el = document.getElementById('calc-pmt-total');
+  if(el){ el.textContent = 'סה"כ: '+t+'%'; el.className = 'bdg '+(t===100?'bdg-g':'bdg-r'); }
+}
+
+function runCalc(){
+  const res = document.getElementById('calc-result');
+  const t   = calcPmts.reduce((a,p)=>a+p.pct,0);
+  if(!calcApt || t!==100){ if(res) res.style.display='none'; return; }
+  if(res) res.style.display='block';
+
+  const r    = mr(cfg.rate);
+  const f    = npvF(calcPmts, cfg.rate);
+  const tN   = targetNet(calcApt);
+  const minN = tN / f;
+  const flrG = minN * (1 + cfg.vat/100);
+  const mkt  = calcApt.mkt || 0;
+
+  const fp   = document.getElementById('calc-floor-price');
+  const dpct = document.getElementById('calc-discount-pct');
+  const damt = document.getElementById('calc-discount-amt');
+  const dmkt = document.getElementById('calc-mkt-price');
+  if(fp) fp.textContent = fmt(flrG);
+  if(dmkt) dmkt.textContent = mkt ? fmt(mkt) : '—';
+  if(dpct && damt){
+    if(mkt && mkt > flrG){
+      const discAmt = mkt - flrG;
+      const discPct = (discAmt / mkt * 100);
+      dpct.textContent = fmt(discAmt);
+      damt.textContent = discPct.toFixed(1) + '% הנחה על המחירון';
+    } else if(!mkt){
+      dpct.textContent = '—';
+      damt.textContent = 'לא הוזן מחיר שיווק לדירה זו';
+    } else {
+      dpct.textContent = '0%';
+      damt.textContent = 'אין מרווח — בדוק נתוני הדירה';
+    }
+  }
+
+  // Breakdown
+  const bk = document.getElementById('calc-breakdown');
+  if(bk) bk.innerHTML = calcPmts.map((p,i)=>{
+    const nomN=minN*(p.pct/100), pvN=nomN/Math.pow(1+r,p.months);
+    const nomG=nomN*(1+cfg.vat/100), pvG=pvN*(1+cfg.vat/100);
+    return `<div class="npv-row">
+      <div><span class="bold s">${p.label||'פעימה '+(i+1)}</span> <span class="dim xs">${p.pct}% בחודש ${p.months}</span></div>
+      <div class="fc">
+        <span class="dim xs">${fmt(nomG)} נומינלי</span>
+        <span class="dim">→</span>
+        <span class="bold">${fmt(pvG)} PV</span>
+        <span class="bdg bdg-r xs">-${fmt((nomN-pvN)*(1+cfg.vat/100))}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const sm = document.getElementById('calc-summary');
+  if(sm) sm.innerHTML =
+    'NPV Factor: <strong>'+f.toFixed(4)+'</strong> | יעד נטו: '+fmt(tN)+' | מינימום נטו: '+fmt(minN)+
+    ' | <span class="cred bold">מינימום ברוטו: '+fmt(flrG)+'</span>'+
+    (mkt?' | מחירון: '+fmt(mkt)+' | <span class="cgreen bold">מרווח: '+fmt(mkt-flrG)+' ('+((mkt-flrG)/mkt*100).toFixed(1)+'%)</span>':'');
+
+  // Clear offer
+  const oi = document.getElementById('calc-offer');
+  const or2= document.getElementById('calc-offer-res');
+  if(oi) oi.value='';
+  if(or2) or2.innerHTML='';
+}
+
+function calcCheckOffer(){
+  const offer = +document.getElementById('calc-offer').value;
+  const el    = document.getElementById('calc-offer-res');
+  if(!offer || !calcApt){ if(el) el.innerHTML=''; return; }
+  const f    = npvF(calcPmts, cfg.rate);
+  const flrG = targetNet(calcApt)/f*(1+cfg.vat/100);
+  const ok   = offer >= flrG;
+  const diff = offer - flrG;
+  const npvNet = offer/(1+cfg.vat/100)*f;
+  const excess = npvNet - targetNet(calcApt);
+  // Manager can sell below floor — show warning but allow
+  const statusHtml = ok
+    ? `<div class="ib ib-g" style="font-size:.9rem;padding:16px 18px">
+        <div style="font-size:1.2rem;font-weight:800;margin-bottom:10px">✅ ניתן לסגור במחיר זה</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
+          <div><span style="opacity:.7">הצעת לקוח:</span> <strong>${fmt(offer)}</strong></div>
+          <div><span style="opacity:.7">מחיר מינימום:</span> <strong>${fmt(flrG)}</strong></div>
+          <div><span style="opacity:.7">מרווח מעל רצפה:</span> <strong class="cgreen">+${fmt(diff)}</strong></div>
+          <div><span style="opacity:.7">NPV עודף:</span> <strong class="cgreen">+${fmt(excess)}</strong></div>
+        </div>
+      </div>`
+    : `<div class="ib" style="background:#2d1a0e;border:1px solid #c05c1a;color:#fff;font-size:.9rem;padding:16px 18px;border-radius:10px">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:8px;color:#fb923c">⚠️ מתחת לרצפה — אישור מנהל בלבד</div>
+        <div style="font-size:.8rem;color:rgba(255,255,255,.6);margin-bottom:10px">כמנהל, ביכולתך לאשר עסקה זו למרות שהמחיר נמוך מהרצפה המחושבת.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
+          <div><span style="opacity:.7">הצעת לקוח:</span> <strong>${fmt(offer)}</strong></div>
+          <div><span style="opacity:.7">מחיר מינימום:</span> <strong class="cred">${fmt(flrG)}</strong></div>
+          <div><span style="opacity:.7">חסר עד רצפה:</span> <strong class="cred">${fmt(diff)}</strong></div>
+          <div><span style="opacity:.7">שחיקת NPV:</span> <strong class="cred">${fmt(excess)}</strong></div>
+        </div>
+      </div>`;
+  // Add close deal button for manager (always shown when offer is entered)
+  const mktC = calcApt.mkt||0;
+  const givenDiscC = mktC ? ((mktC-offer)/mktC*100).toFixed(1) : null;
+  const closeBtnHtml = `
+    <button onclick="submitDealMgr(${offer})" style="width:100%;margin-top:10px;padding:14px;background:#e8c84a;color:#1a1714;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.15s" onmouseover="this.style.background='#d4b038'" onmouseout="this.style.background='#e8c84a'">
+      🤝 סגור עסקה — ${fmt(offer)}${givenDiscC?' (הנחה '+givenDiscC+'%)':''}
+    </button>`;
+  el.innerHTML = statusHtml + closeBtnHtml;
+}
+
+function submitDealMgr(offerPrice){
+  if(!calcApt || !calcProj || !me) return;
+  const f       = npvF(calcPmts, cfg.rate);
+  const flrG    = targetNet(calcApt)/f*(1+cfg.vat/100);
+  const isBelowFloor = offerPrice < flrG;
+  const aptInfo = 'דירה ' + calcApt.num + ' — ' + calcProj.name;
+  const warnMsg = isBelowFloor
+    ? `⚠️ מחיר מתחת לרצפה!
+${aptInfo}
+
+מחיר: ${fmt(offerPrice)}
+רצפה: ${fmt(flrG)}
+שחיקה: ${fmt(offerPrice-flrG)}
+
+כמנהל, ביכולתך לאשר. האם להמשיך?`
+    : `סגירת עסקה
+${aptInfo}
+
+מחיר: ${fmt(offerPrice)}
+
+האם לאשר?`;
+  if(!confirm(warnMsg)) return;
+
+  const priceNet = offerPrice/(1+cfg.vat/100);
+  const npvNet   = priceNet*f;
+  const tNet     = targetNet(calcApt);
+  const excess   = npvNet - tNet;
+  const mkt      = calcApt.mkt||0;
+  const discAmt  = mkt ? mkt-offerPrice : 0;
+  const discPct  = mkt ? (discAmt/mkt*100) : 0;
+
+  const deal = {
+    id:       uid(),
+    aptId:    calcApt.id,
+    aptNum:   calcApt.num,
+    aptType:  calcApt.type||'',
+    projId:   calcProj.id,
+    projName: calcProj.name,
+    userId:   me.id,
+    gross:    offerPrice,
+    net:      priceNet,
+    mkt:      mkt,
+    discAmt:  discAmt,
+    discPct:  +discPct.toFixed(2),
+    pmts:     calcPmts.map(p=>({...p})),
+    npv:      npvNet,
+    tNet:     tNet,
+    excess:   excess,
+    belowFloor: isBelowFloor,
+    status:   'APP', // manager deals auto-approved
+    date:     new Date().toLocaleDateString('he-IL'),
+  };
+
+  deals.push(deal);
+  const apt = apts.find(a=>a.id===calcApt.id);
+  if(apt) apt.sold = true;
+  saveAll();
+
+  // reset
+  calcApt=null; calcProj=null; calcPmts=[];
+  document.getElementById('calc-result').style.display='none';
+  document.getElementById('calc-placeholder').style.display='block';
+  renderAll();
+  showTab('deals', null);
+  toast(isBelowFloor ? '⚠️ עסקה נסגרה מתחת לרצפה — מאושרת אוטומטית' : '✅ עסקה נסגרה ואושרה!');
+}
+
+// ────────────────────────────────────────────
+//  TAB NAVIGATION
+// ────────────────────────────────────────────
+function showTab(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
+  const t=document.getElementById('tab-'+name);
+  if(t)t.classList.add('on');
+  if(btn)btn.classList.add('on');
+  if(name==='dash') renderDash();
+  if(name==='projects') renderProjects();
+  if(name==='deals') renderDeals();
+  if(name==='users') renderUsers();
+  if(name==='calc') renderDCF();
+}
+
+// ════════════════════════════════════════════
+// ███  SALES CALCULATOR
+// ════════════════════════════════════════════
+function buildSales(){
+  document.getElementById('nav').innerHTML=`<button class="on">מחשבון מכירה</button>`;
+  svProj=null; svApt=null;
+  svPmts=[];
+
+  document.getElementById('content').innerHTML=`
+  <div class="sv-wrap">
+    <div class="sv-hd">
+      <h1>מחשבון מחיר סגירה</h1>
+      <p>בחר פרויקט ← דירה ← הזן פריסה ← קבל מחיר מינימום</p>
+    </div>
+
+    <!-- STEP 1: PROJECT -->
+    <div class="card" id="s1">
+      <div class="step-lbl">שלב 1 — בחירת פרויקט</div>
+      <div id="sv-proj-grid" class="proj-cards"></div>
+      <div id="sv-no-proj" class="ib ib-or mt2" style="display:none">המנהל עדיין לא הוסיף פרויקטים</div>
+    </div>
+
+    <!-- STEP 2: APT (hidden until project chosen) -->
+    <div class="card" id="s2" style="display:none">
+      <div class="fb mb3">
+        <div class="step-lbl">שלב 2 — בחירת דירה</div>
+        <span id="sv-proj-name" class="bdg bdg-b"></span>
+      </div>
+      <div id="sv-apt-grid" class="apt-cards"></div>
+      <div id="sv-no-apt" class="ib ib-or mt2" style="display:none">אין דירות פנויות בפרויקט</div>
+    </div>
+
+    <!-- STEP 3: PAYMENTS (hidden until apt chosen) -->
+    <div class="card" id="s3" style="display:none">
+      <div class="fb mb3">
+        <div class="step-lbl">שלב 3 — פריסת תשלומים</div>
+        <div id="sv-pmt-total" class="bdg bdg-gr">0%</div>
+      </div>
+      <div id="sv-pmts-list"></div>
+      <button class="btn bgh bsm mt2" onclick="addSVPmt()">+ פעימה</button>
+
+    </div>
+
+    <!-- RESULT -->
+    <div id="sv-result" style="display:none">
+
+      <!-- HERO: max discount -->
+      <div id="sv-discount-box" style="
+        background:linear-gradient(135deg,#0f4d2a 0%,#186038 100%);
+        border-radius:16px;padding:32px 24px;text-align:center;
+        margin-top:14px;box-shadow:0 8px 28px rgba(24,96,56,.3)">
+        <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.5);margin-bottom:10px">הנחה מקסימלית לפריסה זו</div>
+        <div id="sv-discount-pct" style="font-family:'DM Serif Display',serif;font-size:5rem;line-height:1;color:#fff;letter-spacing:-2px">—</div>
+        <div id="sv-discount-amt" style="font-size:.95rem;color:rgba(255,255,255,.65);margin-top:8px;font-weight:600"></div>
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.15)">
+          <span style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.8px">מחיר סגירה מינימלי&nbsp;&nbsp;</span>
+          <span id="sv-floor-price" style="font-size:1rem;font-weight:800;color:rgba(255,255,255,.6)">—</span>
+          <span style="font-size:.7rem;color:rgba(255,255,255,.35)">&nbsp;&nbsp;|&nbsp;&nbsp;מחירון&nbsp;</span>
+          <span id="sv-mkt-price" style="font-size:1rem;font-weight:800;color:rgba(255,255,255,.45)">—</span>
+        </div>
+      </div>
+
+      <!-- offer check -->
+      <div class="card mt3">
+        <div class="card-hd"><h3>בדיקת הצעת לקוח</h3></div>
+        <div class="fg hi mb3">
+          <label>מחיר שהלקוח מציע (ברוטו כולל מע&quot;מ) <span class="vat">כולל מע&quot;מ</span></label>
+          <input type="number" id="sv-offer" placeholder="הזן מחיר..." oninput="checkOffer()">
+        </div>
+        <div id="sv-offer-res"></div>
+      </div>
+    </div>
+  </div>`;
+
+  renderSVProjects();
+}
+
+function renderSVProjects(){
+  const grid=document.getElementById('sv-proj-grid');
+  const noP=document.getElementById('sv-no-proj');
+  if(!grid) return;
+  if(!projects.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
+  if(noP) noP.style.display='none';
+  grid.innerHTML=projects.map(p=>{
+    const cnt=apts.filter(a=>a.projId===p.id&&!a.sold).length;
+    const sel=svProj?.id===p.id;
+    return`<div class="proj-card${sel?' sel':''}" onclick="selectProj('${p.id}')">
+      <div class="pname">${p.name}</div>
+      <div class="ploc">${p.loc||''}</div>
+      <div class="pcnt ${cnt?'cgreen':'dim'}">${cnt} דירות פנויות</div>
+    </div>`;
+  }).join('');
+}
+
+function selectProj(id){
+  svProj=projects.find(p=>p.id===id);
+  svApt=null;
+  const s2=document.getElementById('s2');
+  if(s2)s2.style.display='block';
+  const s3=document.getElementById('s3');
+  if(s3)s3.style.display='none';
+  const res=document.getElementById('sv-result');
+  if(res)res.style.display='none';
+  const badge=document.getElementById('sv-proj-name');
+  if(badge)badge.textContent=svProj.name;
+  renderSVProjects(); // re-render to show selection
+  renderSVApts();
+}
+
+function renderSVApts(){
+  const grid=document.getElementById('sv-apt-grid');
+  const noA=document.getElementById('sv-no-apt');
+  if(!grid||!svProj) return;
+  const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold);
+  if(!avail.length){grid.innerHTML='';if(noA)noA.style.display='block';return;}
+  if(noA)noA.style.display='none';
+  grid.innerHTML=avail.map(a=>{
+    const sel=svApt?.id===a.id;
+    return`<div class="apt-card${sel?' sel':''}" onclick="selectApt('${a.id}')">
+      <div class="anum">דירה ${a.num}</div>
+      <div class="adet">קומה ${a.floor} | ${a.type||'—'}<br>${a.area} מ&quot;ר | ${a.park} חניות</div>
+      ${a.mkt?`<div class="aprice">${fmt(a.mkt)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function selectApt(id){
+  svApt=apts.find(a=>a.id===id);
+  if(!svApt||!svProj) return;
+  // load project default payments
+  svPmts=[{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+  const s3=document.getElementById('s3');
+  if(s3)s3.style.display='block';
+  const res=document.getElementById('sv-result');
+  if(res)res.style.display='none';
+  renderSVApts(); // highlight
+  renderSVPmts();
+  calcFloor();
+}
+
+function renderSVPmts(){
+  const el=document.getElementById('sv-pmts-list');
+  if(!el) return;
+  el.innerHTML=svPmts.map((p,i)=>`
+    <div class="fc mb2" style="gap:8px">
+      <div class="fg" style="flex:2"><label>תיאור</label><input type="text" value="${p.label||''}" oninput="svPmts[${i}].label=this.value"></div>
+      <div class="fg" style="flex:1"><label>% מהמחיר</label><input type="number" value="${p.pct}" oninput="svPmts[${i}].pct=+this.value;svPmtTotal();calcFloor()"></div>
+      <div class="fg" style="flex:1.2"><label>חודשים מהיום</label><input type="number" value="${p.months}" oninput="svPmts[${i}].months=+this.value;calcFloor()"></div>
+      <div style="align-self:flex-end"><button class="btn bdel bsm" onclick="svPmts.splice(${i},1);renderSVPmts();calcFloor()">✕</button></div>
+    </div>`).join('');
+  svPmtTotal();
+}
+function addSVPmt(){svPmts.push({label:'תשלום '+(svPmts.length+1),pct:0,months:12});renderSVPmts();}
+function svPmtTotal(){
+  const t=svPmts.reduce((a,p)=>a+p.pct,0);
+  const el=document.getElementById('sv-pmt-total');
+  if(el){el.textContent='סה"כ: '+t+'%';el.className='bdg '+(t===100?'bdg-g':'bdg-r');}
+}
+
+function calcFloor(){
+  const res=document.getElementById('sv-result');
+  const t=svPmts.reduce((a,p)=>a+p.pct,0);
+  if(!svApt||t!==100){if(res)res.style.display='none';return;}
+  if(res)res.style.display='block';
+
+  const f   = npvF(svPmts,cfg.rate);
+  const flrG= targetNet(svApt)/f*(1+cfg.vat/100);
+
+  const mkt = svApt.mkt||0;
+  document.getElementById('sv-floor-price').textContent = fmt(flrG);
+  document.getElementById('sv-mkt-price').textContent   = mkt ? fmt(mkt) : '—';
+
+  const pctEl = document.getElementById('sv-discount-pct');
+  const amtEl = document.getElementById('sv-discount-amt');
+  if(mkt && mkt > flrG){
+    const discAmt = mkt - flrG;
+    const discPct = (discAmt / mkt * 100);
+    pctEl.textContent = fmt(discAmt);
+    amtEl.textContent = discPct.toFixed(1) + '% הנחה על המחירון';
+  } else if(!mkt){
+    pctEl.textContent = '—';
+    amtEl.textContent = 'לא הוזן מחיר מחירון לדירה זו';
+  } else {
+    pctEl.textContent = '0%';
+    amtEl.textContent = 'אין מרווח — מחיר מחירון נמוך מהרצפה';
+  }
+
+  document.getElementById('sv-offer').value='';
+  document.getElementById('sv-offer-res').innerHTML='';
+}
+
+function checkOffer(){
+  const offer=+document.getElementById('sv-offer').value;
+  const el=document.getElementById('sv-offer-res');
+  if(!offer||!svApt){el.innerHTML='';return;}
+  const f=npvF(svPmts,cfg.rate);
+  const flrG=targetNet(svApt)/f*(1+cfg.vat/100);
+  const ok=offer>=flrG;
+
+  const mkt2 = svApt.mkt||0;
+  const givenDisc = mkt2 ? ((mkt2-offer)/mkt2*100).toFixed(1) : null;
+  const stillLeft = mkt2 && ok ? ((offer-flrG)/mkt2*100).toFixed(1) : null;
+  // Sales rep: hard block below floor — no override allowed
+  el.innerHTML = ok
+    ? `<div style="background:linear-gradient(135deg,#0f4d2a,#186038);border-radius:12px;padding:20px 22px;text-align:center;color:#fff;margin-bottom:10px">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:6px">✅ ניתן לסגור</div>
+        ${givenDisc?`<div style="font-size:.88rem;color:rgba(255,255,255,.7)">ניתנת הנחה של <strong style="color:#fff;font-size:1.05rem">${givenDisc}%</strong> מהמחירון</div>`:''}
+        ${stillLeft?`<div style="font-size:.78rem;color:rgba(255,255,255,.45);margin-top:4px">נותרו עוד ${stillLeft}% ניתנים להנחה</div>`:''}
+      </div>
+      <button onclick="submitDeal(${offer})" style="width:100%;padding:14px;background:#e8c84a;color:#1a1714;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.3px;transition:.15s" onmouseover="this.style.background='#d4b038'" onmouseout="this.style.background='#e8c84a'">
+        🤝 אישור עסקה — ${fmt(offer)}
+      </button>`
+    : `<div style="background:linear-gradient(135deg,#6b1a14,#a82820);border-radius:12px;padding:20px 22px;text-align:center;color:#fff">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:6px">🚫 לא ניתן לסגור</div>
+        <div style="font-size:.88rem;color:rgba(255,255,255,.7)">המחיר המינימלי לפריסה זו הוא <strong style="color:#fff">${fmt(flrG)}</strong></div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:6px">לאישור חריג — פנה למנהל</div>
+      </div>`;
+}
+
+// ════════════════════════════════════════════
+//  SUBMIT DEAL (from sales view)
+// ════════════════════════════════════════════
+function submitDeal(offerPrice){
+  if(!svApt || !svProj || !me) return;
+  if(!confirm('לאשר עסקה לדירה ' + svApt.num + ' ב-' + fmt(offerPrice) + '?')) return;
+
+  const f      = npvF(svPmts, cfg.rate);
+  const flrG   = targetNet(svApt)/f*(1+cfg.vat/100);
+  const priceNet = offerPrice/(1+cfg.vat/100);
+  const npvNet   = priceNet*f;
+  const tNet     = targetNet(svApt);
+  const excess   = npvNet - tNet;
+  const mkt      = svApt.mkt||0;
+  const discAmt  = mkt ? mkt-offerPrice : 0;
+  const discPct  = mkt ? (discAmt/mkt*100) : 0;
+
+  const deal = {
+    id:       uid(),
+    aptId:    svApt.id,
+    aptNum:   svApt.num,
+    aptType:  svApt.type||'',
+    projId:   svProj.id,
+    projName: svProj.name,
+    userId:   me.id,
+    gross:    offerPrice,
+    net:      priceNet,
+    mkt:      mkt,
+    discAmt:  discAmt,
+    discPct:  +discPct.toFixed(2),
+    pmts:     svPmts.map(p=>({...p})),
+    npv:      npvNet,
+    tNet:     tNet,
+    excess:   excess,
+    status:   'PND',
+    date:     new Date().toLocaleDateString('he-IL'),
+  };
+
+  deals.push(deal);
+  // mark apt as sold
+  const apt = apts.find(a=>a.id===svApt.id);
+  if(apt) apt.sold = true;
+  saveAll();
+
+  // reset calculator
+  svApt=null; svProj=null; svPmts=[];
+  document.getElementById('sv-result').style.display='none';
+  document.getElementById('s2').style.display='none';
+  document.getElementById('s3').style.display='none';
+  renderSVProjects();
+  toast('✅ העסקה נשלחה לאישור המנהל!');
+}
+
+// ════════════════════════════════════════════
+//  STORAGE SYNC (cross tab)
+// ════════════════════════════════════════════
+window.addEventListener('storage',e=>{
+  if(e.key===SK.projects){ projects=JSON.parse(e.newValue||'[]'); if(me?.role==='sales') renderSVProjects(); else renderProjects(); }
+  if(e.key===SK.apts){     apts=JSON.parse(e.newValue||'[]');     if(me?.role==='sales'){renderSVProjects();if(svProj)renderSVApts();}else renderProjects(); }
+  if(e.key===SK.cfg){      cfg=JSON.parse(e.newValue||'{}'); }
+  if(e.key===SK.deals){    deals=JSON.parse(e.newValue||'[]');     if(me?.role==='manager'){renderDeals();renderDash();} }
+  if(e.key===SK.users){    users=JSON.parse(e.newValue||'[]'); }
+});
+
+// ════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════
+renderLogin();
+if(sess?.uid){
+  const u=users.find(x=>x.id===sess.uid);
+  if(u){ me=u; document.getElementById('login-wrap').style.display='none'; document.getElementById('app').style.display='block'; initApp(); }
+}
+</script>
+</body>
+</html>
