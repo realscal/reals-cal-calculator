@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>נדל&quot;ן פרו — מערכת מכירות</title>
+<title>RealsCal — מערכת ניהול מכירות</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f5f3ee; --white:#fff;
@@ -188,20 +190,76 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 <!-- ══ LOGIN ══ -->
 <div id="login-wrap">
   <div class="login-card">
-    <div class="login-logo">נדל&quot;ן פרו</div>
-    <div class="login-sub">בחר משתמש להיכנס למערכת</div>
-    <div class="login-seg">
-      <button id="seg-mgr" class="on" onclick="setLoginTab('manager')">👔 מנהל מכירות</button>
-      <button id="seg-sal" onclick="setLoginTab('sales')">🤝 איש מכירות</button>
+    <div class="login-logo">Reals<span style="background:var(--blue);color:#fff;font-family:Heebo,sans-serif;font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:4px;letter-spacing:.5px;vertical-align:middle;margin-right:4px">Cal</span></div>
+    <div class="login-sub">מערכת ניהול מכירות לנדל"ן</div>
+
+    <div class="login-seg" style="margin-bottom:20px">
+      <button id="tab-li" class="on" onclick="showAuthTab('login')">כניסה</button>
+      <button id="tab-su" onclick="showAuthTab('signup')">הרשמה</button>
     </div>
-    <div id="login-list"></div>
+
+    <!-- LOGIN -->
+    <div id="auth-login">
+      <div style="margin-bottom:12px">
+        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">אימייל</label>
+        <input type="email" id="li-email" placeholder="name@company.com" dir="ltr"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">סיסמה</label>
+        <input type="password" id="li-pass" placeholder="••••••••" dir="ltr"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button onclick="doLogin()"
+        style="width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;transition:.15s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        כניסה →
+      </button>
+      <div id="li-err" style="color:var(--red);font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="auth-signup" style="display:none">
+      <div style="margin-bottom:12px">
+        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">שם מלא</label>
+        <input type="text" id="su-name" placeholder="ישראל ישראלי"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">אימייל</label>
+        <input type="email" id="su-email" placeholder="name@company.com" dir="ltr"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">סיסמה (לפחות 6 תווים)</label>
+        <input type="password" id="su-pass" placeholder="••••••••" dir="ltr"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
+          onkeydown="if(event.key==='Enter')doSignup()">
+      </div>
+      <button onclick="doSignup()"
+        style="width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;transition:.15s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        הרשמה ←
+      </button>
+      <div id="su-err" style="color:var(--red);font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
+      <div id="su-ok" style="color:var(--green);font-size:.82rem;margin-top:10px;text-align:center;display:none;line-height:1.5">✅ נשלח אימות לאימייל שלך<br><span style="font-size:.75rem;opacity:.7">בדוק את תיבת הדואר ולחץ על הקישור</span></div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:.7rem;color:var(--ink3)">RealsCal © 2025</div>
   </div>
 </div>
 
 <!-- ══ APP ══ -->
 <div id="app" style="display:none">
   <header>
-    <div class="logo">נדל&quot;ן פרו <span>PRO</span></div>
+    <div class="logo">Reals<span>Cal</span></div>
     <nav id="nav"></nav>
     <div class="fc" style="gap:8px">
       <div id="role-switch" style="display:none">
@@ -334,30 +392,39 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 // ════════════════════════════════════════════
 //  STORAGE
 // ════════════════════════════════════════════
-const SK = { users:'re_u', cfg:'re_cfg', projects:'re_proj', apts:'re_apts', deals:'re_deals', sess:'re_sess' };
+// ════════════════════════════════════════════
+//  SUPABASE INIT
+// ════════════════════════════════════════════
+const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTM1MDgsImV4cCI6MjA1Nzg4OTUwOH0.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+
+// per-user localStorage keys
+function SK(uid){
+  return {
+    cfg:      'rs_cfg_'+uid,
+    projects: 'rs_proj_'+uid,
+    apts:     'rs_apts_'+uid,
+    deals:    'rs_deals_'+uid,
+  };
+}
 function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{return d;} }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} }
 
 // ════════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════════
-let users    = lsGet(SK.users,    [{id:'u1',name:'אבי כהן',role:'manager',emoji:'👔',color:'#a8720a'},{id:'u2',name:'דנה לוי',role:'sales',emoji:'⭐',color:'#0f5299'},{id:'u3',name:'משה פרץ',role:'sales',emoji:'🤝',color:'#186038'}]);
-let cfg      = lsGet(SK.cfg,      {premium:5,rate:7,vat:18,target:20});
-let projects = lsGet(SK.projects, []);
-let apts     = lsGet(SK.apts,     []);
-let deals    = lsGet(SK.deals,    []);
-let sess     = lsGet(SK.sess,     null);
+let cfg      = {premium:5,rate:7,vat:18,target:20};
+let projects = [];
+let apts     = [];
+let deals    = [];
+let users    = [];
 
-let me = null;          // current user
-let editProjId = null;  // project being edited
-let editAptProjId = null; // which project the apt belongs to
+let me = null;
+let editProjId = null;
+let editAptProjId = null;
 let editAptId = null;
-
-// sales calculator state
 let svProj = null;
 let svApt  = null;
 let svPmts = [];
-
 let _charts = {};
 
 // ════════════════════════════════════════════
@@ -370,48 +437,94 @@ function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100
 function bankFloor(apt){ return apt.area*apt.sqm+(apt.ext||0); }
 function targetNet(apt){ return bankFloor(apt)*(1+cfg.premium/100); }
 function floorGross(apt,pmts){ return targetNet(apt)/npvF(pmts,cfg.rate)*(1+cfg.vat/100); }
-function saveAll(){ lsSet(SK.users,users);lsSet(SK.cfg,cfg);lsSet(SK.projects,projects);lsSet(SK.apts,apts);lsSet(SK.deals,deals); }
+function saveAll(){
+  if(!me) return;
+  const k=SK(me.id);
+  lsSet(k.cfg,cfg); lsSet(k.projects,projects); lsSet(k.apts,apts); lsSet(k.deals,deals);
+}
+function loadUserData(){
+  if(!me) return;
+  const k=SK(me.id);
+  cfg      = lsGet(k.cfg,      {premium:5,rate:7,vat:18,target:20});
+  projects = lsGet(k.projects, []);
+  apts     = lsGet(k.apts,     []);
+  deals    = lsGet(k.deals,    []);
+}
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
 function openOv(id){ document.getElementById(id).classList.add('on'); }
 function closeOv(id){ document.getElementById(id).classList.remove('on'); }
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('on'); }));
 
 // ════════════════════════════════════════════
-//  LOGIN
+//  AUTH UI
 // ════════════════════════════════════════════
-let loginTab = 'manager';
-function setLoginTab(t){
-  loginTab=t;
-  document.getElementById('seg-mgr').className=t==='manager'?'on':'';
-  document.getElementById('seg-sal').className=t==='sales'?'on':'';
-  renderLogin();
+function showAuthTab(tab){
+  document.getElementById('auth-login').style.display  = tab==='login'  ? 'block' : 'none';
+  document.getElementById('auth-signup').style.display = tab==='signup' ? 'block' : 'none';
+  document.getElementById('tab-li').className = tab==='login'  ? 'on' : '';
+  document.getElementById('tab-su').className = tab==='signup' ? 'on' : '';
 }
-function renderLogin(){
-  const el=document.getElementById('login-list');
-  const list=users.filter(u=>u.role===loginTab);
-  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3);font-size:.83rem">אין משתמשים — כנס כמנהל קודם</div>'; return; }
-  el.innerHTML=list.map(u=>`
-    <div class="user-btn" onclick="doLogin('${u.id}')">
-      <div class="user-av" style="background:${u.color}22;color:${u.color}">${u.emoji}</div>
-      <div><div class="user-name">${u.name}</div><div class="user-role">${u.role==='manager'?'מנהל מכירות':'איש מכירות'}</div></div>
-      <div style="margin-right:auto;color:var(--ink3)">←</div>
-    </div>`).join('');
+
+async function doLogin(){
+  const email = document.getElementById('li-email').value.trim();
+  const pass  = document.getElementById('li-pass').value;
+  const err   = document.getElementById('li-err');
+  err.textContent = '';
+  if(!email||!pass){ err.textContent='יש למלא אימייל וסיסמה'; return; }
+  const {data,error} = await _sb.auth.signInWithPassword({email,password:pass});
+  if(error){ err.textContent = 'פרטים שגויים — נסה שוב'; return; }
+  enterApp(data.user);
 }
-function doLogin(uid){
-  me=users.find(u=>u.id===uid);
-  if(!me) return;
-  lsSet(SK.sess,{uid});
+
+async function doSignup(){
+  const name  = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass  = document.getElementById('su-pass').value;
+  const err   = document.getElementById('su-err');
+  const ok    = document.getElementById('su-ok');
+  err.textContent=''; ok.style.display='none';
+  if(!name||!email||!pass){ err.textContent='יש למלא את כל השדות'; return; }
+  if(pass.length<6){ err.textContent='הסיסמה חייבת להיות לפחות 6 תווים'; return; }
+  const {data,error} = await _sb.auth.signUp({
+    email, password:pass,
+    options:{ data:{ full_name:name } }
+  });
+  if(error){ err.textContent='שגיאה: '+error.message; return; }
+  ok.style.display='block';
+}
+
+function enterApp(user){
+  me = {
+    id:    user.id,
+    name:  user.user_metadata?.full_name || user.email.split('@')[0],
+    email: user.email,
+    role:  'manager', // כל משתמש חדש הוא מנהל של עצמו
+    emoji: '👔',
+    color: '#a8720a',
+  };
+  users = [me];
+  loadUserData();
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('app').style.display='block';
   initApp();
 }
-function logout(){
-  me=null; lsSet(SK.sess,null);
+
+async function logout(){
+  await _sb.auth.signOut();
+  me=null; projects=[]; apts=[]; deals=[]; cfg={premium:5,rate:7,vat:18,target:20};
   document.getElementById('app').style.display='none';
   document.getElementById('login-wrap').style.display='flex';
   svProj=null; svApt=null;
-  renderLogin();
 }
+
+// ════════════════════════════════════════════
+//  AUTO LOGIN on page load
+// ════════════════════════════════════════════
+_sb.auth.getSession().then(({data})=>{
+  if(data.session?.user){
+    enterApp(data.session.user);
+  }
+});
 
 // ════════════════════════════════════════════
 //  APP BOOT
@@ -1610,11 +1723,7 @@ window.addEventListener('storage',e=>{
 // ════════════════════════════════════════════
 //  BOOT
 // ════════════════════════════════════════════
-renderLogin();
-if(sess?.uid){
-  const u=users.find(x=>x.id===sess.uid);
-  if(u){ me=u; document.getElementById('login-wrap').style.display='none'; document.getElementById('app').style.display='block'; initApp(); }
-}
+// boot handled by _sb.auth.getSession above
 </script>
 </body>
 </html>
