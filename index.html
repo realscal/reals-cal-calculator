@@ -516,7 +516,7 @@ async function saveAll(){
   await _sb.from('user_config').upsert({user_id:ownerId, config:cfg});
   // Save projects
   if(projects.length){
-    await _sb.from('projects').upsert(projects.map(p=>({...p,user_id:ownerId})));
+    await _sb.from('projects').upsert(projects.map(p=>({id:p.id,user_id:ownerId,name:p.name,loc:p.loc,target:p.target,payments:p.payments||[],assigned_sales:p.assignedSales||[]})));
   }
   // Save apartments
   if(apts.length){
@@ -1221,25 +1221,54 @@ function renderUsers(){
   const mgrs   = users.filter(u=>u.role==='manager');
   const sales  = users.filter(u=>u.role==='sales');
   const roleLabel = r => r==='owner'?'👑 בעלים':r==='manager'?'👔 מנהל':'⭐ איש מכירות';
-  const canDel = me.role==='owner';
+  const canEdit = me.role==='owner'||me.role==='manager';
+
   const card=u=>{
-    const dc=deals.filter(d=>d.userId===u.id).length;
-    return`<div style="background:#faf8f4;border:1px solid var(--border);border-radius:9px;padding:13px 15px;display:flex;align-items:center;gap:11px">
-      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:${u.color}22;color:${u.color};flex-shrink:0">${u.emoji||'👤'}</div>
-      <div style="flex:1">
-        <div class="bold">${u.name}</div>
-        <div class="dim xs">${roleLabel(u.role)} • ${u.email||''}</div>
-        <div class="dim xs">${dc} עסקאות</div>
+    const dc = deals.filter(d=>d.userId===u.id).length;
+    // assigned projects for sales
+    const assignedProjNames = u.role==='sales'
+      ? projects.filter(p=>(p.assignedSales||[]).includes(u.id)).map(p=>p.name)
+      : [];
+    return`<div style="background:#faf8f4;border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${u.role==='sales'?'10':'0'}px">
+        <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:${u.color}22;color:${u.color};flex-shrink:0">${u.emoji||'👤'}</div>
+        <div style="flex:1">
+          <div class="bold">${u.name}</div>
+          <div class="dim xs">${roleLabel(u.role)} • ${u.email||''} • ${dc} עסקאות</div>
+        </div>
+        ${u.id===me.id?'<span class="bdg bdg-o">אתה</span>':canEdit&&u.role!=='owner'?`<button class="bic" onclick="delUser('${u.id}')">🗑</button>`:''}
       </div>
-      ${u.id===me.id?'<span class="bdg bdg-o">אתה</span>':canDel&&u.role!=='owner'?`<button class="bic" onclick="delUser('${u.id}')">🗑</button>`:''}
+      ${u.role==='sales'&&canEdit?`
+        <div style="font-size:.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">פרויקטים משויכים</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${projects.map(p=>{
+            const isAssigned=(p.assignedSales||[]).includes(u.id);
+            return`<label style="display:flex;align-items:center;gap:5px;background:${isAssigned?'var(--gold-lt)':'#f0ece4'};border:1.5px solid ${isAssigned?'var(--gold)':'var(--border)'};border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem;font-weight:600;transition:.15s">
+              <input type="checkbox" ${isAssigned?'checked':''} onchange="toggleProjAssign('${u.id}','${p.id}',this.checked)" style="accent-color:var(--gold)">
+              ${p.name}
+            </label>`;
+          }).join('')}
+          ${!projects.length?'<span class="dim xs">אין פרויקטים</span>':''}
+        </div>`:''}
     </div>`;
   };
+
   let html = '';
-  if(owners.length) html += `<div class="bold s mb2">בעלים</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px;margin-bottom:20px">${owners.map(card).join('')}</div>`;
-  if(mgrs.length)   html += `<div class="bold s mb2">מנהלים</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px;margin-bottom:20px">${mgrs.map(card).join('')}</div>`;
-  if(sales.length)  html += `<div class="bold s mb2">אנשי מכירות</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px">${sales.map(card).join('')}</div>`;
-  if(!owners.length&&!mgrs.length&&!sales.length) html='<div class="dim" style="padding:24px;text-align:center">אין חברי צוות עדיין — הוסף את הצוות שלך</div>';
+  if(owners.length) html += `<div class="bold s mb2">בעלים</div><div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px">${owners.map(card).join('')}</div>`;
+  if(mgrs.length)   html += `<div class="bold s mb2">מנהלים</div><div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px">${mgrs.map(card).join('')}</div>`;
+  if(sales.length)  html += `<div class="bold s mb2">אנשי מכירות</div><div style="display:flex;flex-direction:column;gap:9px">${sales.map(card).join('')}</div>`;
+  if(!owners.length&&!mgrs.length&&!sales.length) html='<div class="dim" style="padding:24px;text-align:center">אין חברי צוות עדיין — הוסף מלשונית זו</div>';
   el.innerHTML=html;
+}
+
+async function toggleProjAssign(userId, projId, assign){
+  const p = projects.find(x=>x.id===projId);
+  if(!p) return;
+  p.assignedSales = p.assignedSales || [];
+  if(assign){ if(!p.assignedSales.includes(userId)) p.assignedSales.push(userId); }
+  else { p.assignedSales = p.assignedSales.filter(id=>id!==userId); }
+  await saveAll();
+  toast(assign ? '✅ שויך לפרויקט' : 'הוסר מהפרויקט');
 }
 function pickEmoji(e,el){
   document.getElementById('u-new-emoji').value=e;
@@ -1720,9 +1749,15 @@ function renderSVProjects(){
   const grid=document.getElementById('sv-proj-grid');
   const noP=document.getElementById('sv-no-proj');
   if(!grid) return;
-  if(!projects.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
+
+  // Sales rep sees only assigned projects (or all if owner/manager)
+  const visibleProjs = (me.role==='sales')
+    ? projects.filter(p => !p.assignedSales?.length || p.assignedSales.includes(me.id))
+    : projects;
+
+  if(!visibleProjs.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
   if(noP) noP.style.display='none';
-  grid.innerHTML=projects.map(p=>{
+  grid.innerHTML=visibleProjs.map(p=>{
     const cnt=apts.filter(a=>a.projId===p.id&&!a.sold).length;
     const sel=svProj?.id===p.id;
     return`<div class="proj-card${sel?' sel':''}" onclick="selectProj('${p.id}')">
