@@ -417,28 +417,25 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 
 <!-- ══ MODAL: ADD USER ══ -->
 <div class="ov" id="ov-user">
-  <div class="modal" style="width:400px">
+  <div class="modal" style="width:420px">
     <div class="modal-hd">
-      <h2>הוספת משתמש</h2>
+      <h2>הוספת חבר צוות</h2>
       <button class="bic" onclick="closeOv('ov-user')">✕</button>
     </div>
-    <div class="g2 mb3">
-      <div class="fg" style="grid-column:span 2"><label>שם מלא *</label><input id="u-new-name" type="text" placeholder="שם המשתמש"></div>
-      <div class="fg"><label>תפקיד</label>
+    <div style="margin-bottom:12px">
+      <div class="fg mb2"><label>שם מלא *</label><input id="u-new-name" type="text" placeholder="שם המשתמש"></div>
+      <div class="fg mb2"><label>אימייל *</label><input id="u-new-email" type="email" placeholder="name@company.com" dir="ltr"></div>
+      <div class="fg mb2"><label>סיסמה *</label><input id="u-new-pass" type="password" placeholder="לפחות 6 תווים" dir="ltr"></div>
+      <div class="fg mb2"><label>תפקיד</label>
         <select id="u-new-role">
-          <option value="sales">איש מכירות</option>
-          <option value="manager">מנהל</option>
+          <option value="sales">⭐ איש מכירות — מחשבון בלבד</option>
+          <option value="manager">👔 מנהל — גישה מלאה</option>
         </select>
       </div>
-      <div class="fg"><label>אמוג'י</label>
-        <div class="fc mt1" style="flex-wrap:wrap;gap:6px">
-          ${['👤','👨','👩','👨‍💼','👩‍💼','⭐','🤝','🔑','🏠','💼'].map(e=>`<span onclick="pickEmoji('${e}',this)" style="font-size:1.4rem;cursor:pointer;padding:3px;border-radius:5px;border:2px solid transparent;transition:.1s">${e}</span>`).join('')}
-        </div>
-        <input type="hidden" id="u-new-emoji" value="👤">
-      </div>
     </div>
+    <div id="u-new-err" style="color:var(--red);font-size:.78rem;margin-bottom:10px;min-height:16px"></div>
     <div class="modal-ft">
-      <button class="btn bn" style="flex:1" onclick="saveUser()">הוסף</button>
+      <button class="btn bn" style="flex:1" onclick="saveUser()">צור משתמש</button>
       <button class="btn bgh" onclick="closeOv('ov-user')">ביטול</button>
     </div>
   </div>
@@ -514,17 +511,17 @@ function floorGross(apt,pmts){ return targetNet(apt)/npvF(pmts,cfg.rate)*(1+cfg.
 // ════════════════════════════════════════════
 async function saveAll(){
   if(!me) return;
-  const uid = me.id;
+  const ownerId = me.owner_id || me.id;
   // Save config
-  await _sb.from('user_config').upsert({user_id:uid, config:cfg});
+  await _sb.from('user_config').upsert({user_id:ownerId, config:cfg});
   // Save projects
   if(projects.length){
-    await _sb.from('projects').upsert(projects.map(p=>({...p,user_id:uid})));
+    await _sb.from('projects').upsert(projects.map(p=>({...p,user_id:ownerId})));
   }
   // Save apartments
   if(apts.length){
     await _sb.from('apartments').upsert(apts.map(a=>({
-      id:a.id, user_id:uid, proj_id:a.projId,
+      id:a.id, user_id:ownerId, proj_id:a.projId,
       num:a.num, floor:a.floor, type:a.type,
       area:a.area, park:a.park, sqm:a.sqm,
       ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false
@@ -532,7 +529,7 @@ async function saveAll(){
   }
   // Save deals
   if(deals.length){
-    await _sb.from('deals').upsert(deals.map(d=>({id:d.id, user_id:uid, data:d})));
+    await _sb.from('deals').upsert(deals.map(d=>({id:d.id, user_id:ownerId, data:d})));
   }
 }
 
@@ -543,18 +540,19 @@ async function deleteFromCloud(table, id){
 
 async function loadUserData(){
   if(!me) return;
+  const ownerId = me.owner_id || me.id;
   // Load config
-  const {data:cfgRow} = await _sb.from('user_config').select('config').eq('user_id',me.id).single();
+  const {data:cfgRow} = await _sb.from('user_config').select('config').eq('user_id',ownerId).single();
   cfg = cfgRow?.config || {premium:5,rate:7,vat:18,target:20};
 
   // Load projects
-  const {data:projRows} = await _sb.from('projects').select('*').eq('user_id',me.id);
+  const {data:projRows} = await _sb.from('projects').select('*').eq('user_id',ownerId);
   projects = (projRows||[]).map(r=>({
     id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[]
   }));
 
   // Load apartments
-  const {data:aptRows} = await _sb.from('apartments').select('*').eq('user_id',me.id);
+  const {data:aptRows} = await _sb.from('apartments').select('*').eq('user_id',ownerId);
   apts = (aptRows||[]).map(r=>({
     id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
     type:r.type, area:r.area, park:r.park, sqm:r.sqm,
@@ -562,7 +560,7 @@ async function loadUserData(){
   }));
 
   // Load deals
-  const {data:dealRows} = await _sb.from('deals').select('data').eq('user_id',me.id);
+  const {data:dealRows} = await _sb.from('deals').select('data').eq('user_id',ownerId);
   deals = (dealRows||[]).map(r=>r.data);
 }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
@@ -609,19 +607,54 @@ async function doSignup(){
 }
 
 async function enterApp(user){
-  me = {
-    id:    user.id,
-    name:  user.user_metadata?.full_name || user.email.split('@')[0],
-    email: user.email,
-    role:  'manager', // כל משתמש חדש הוא מנהל של עצמו
-    emoji: '👔',
-    color: '#a8720a',
-  };
-  users = [me];
-  // show loading
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--ink3)"><div style="font-size:2rem;margin-bottom:12px">⏳</div>טוען נתונים...</div>';
+
+  // Check if this user is a team member of someone else
+  const {data:memberRow} = await _sb.from('team_members')
+    .select('*').eq('member_id', user.id).single();
+
+  if(memberRow){
+    // This is a team member — load owner's data
+    const ownerMeta = user.user_metadata || {};
+    me = {
+      id:       user.id,
+      name:     memberRow.name || ownerMeta.full_name || user.email.split('@')[0],
+      email:    user.email,
+      role:     memberRow.role,
+      emoji:    memberRow.role==='manager' ? '👔' : '⭐',
+      color:    '#0f5299',
+      owner_id: memberRow.owner_id,  // load data from owner's account
+    };
+  } else {
+    // This is an owner
+    me = {
+      id:       user.id,
+      name:     user.user_metadata?.full_name || user.email.split('@')[0],
+      email:    user.email,
+      role:     'owner',
+      emoji:    '👑',
+      color:    '#a8720a',
+      owner_id: user.id,
+    };
+  }
+
+  // Load team members
+  const {data:teamRows} = await _sb.from('team_members')
+    .select('*').eq('owner_id', me.owner_id);
+  const cols=['#a8720a','#0f5299','#186038','#a82820','#b55c08','#6d28d9'];
+  users = (teamRows||[]).map((r,i)=>({
+    id: r.member_id, name:r.name, email:r.email, role:r.role,
+    emoji: r.role==='manager'?'👔':'⭐',
+    color: cols[i%cols.length],
+    owner_id: r.owner_id
+  }));
+  // Add owner to users list if not already there
+  if(!users.find(u=>u.id===me.owner_id)){
+    users.unshift({id:me.owner_id, name:me.role==='owner'?me.name:'בעלים', role:'owner', emoji:'👑', color:'#a8720a'});
+  }
+
   await loadUserData();
   initApp();
 }
@@ -648,19 +681,20 @@ _sb.auth.getSession().then(({data})=>{
 //  APP BOOT
 // ════════════════════════════════════════════
 function initApp(){
-  document.getElementById('u-dot').style.background=me.role==='manager'?'#e8c84a':'#6ee7b7';
-  document.getElementById('u-name').textContent=me.name+' ('+(me.role==='manager'?'מנהל':'מכירות')+')';
-  // Show switch button only if this user has manager role (owners can switch to sales view)
+  const roleLabel = me.role==='owner'?'בעלים':me.role==='manager'?'מנהל':'איש מכירות';
+  const dotColor  = me.role==='owner'?'#e8c84a':me.role==='manager'?'#60a5fa':'#6ee7b7';
+  document.getElementById('u-dot').style.background = dotColor;
+  document.getElementById('u-name').textContent = me.name+' ('+roleLabel+')';
   const sw = document.getElementById('role-switch');
   const sb = document.getElementById('switch-btn');
-  if(me.role==='manager' && sw && sb){
+  if((me.role==='owner'||me.role==='manager') && sw && sb){
     sw.style.display='block';
     sb.textContent='👁 עבור למבט איש מכירות';
-    sb.dataset.mode='manager'; // current mode
+    sb.dataset.mode='manager';
   } else if(sw){
     sw.style.display='none';
   }
-  if(me.role==='manager') buildManager();
+  if(me.role==='owner'||me.role==='manager') buildManager();
   else buildSales();
 }
 
@@ -682,7 +716,7 @@ function switchRole(){
     sb.style.background='rgba(255,255,255,.1)';
     sb.style.borderColor='rgba(255,255,255,.2)';
     document.getElementById('u-dot').style.background='#e8c84a';
-    buildManager();
+    if(me.role==='owner'||me.role==='manager') buildManager(); else buildSales();
   }
 }
 
@@ -1183,21 +1217,29 @@ async function deleteD(id){
 function renderUsers(){
   const el=document.getElementById('users-list');
   if(!el) return;
-  const mgr=users.filter(u=>u.role==='manager');
-  const sal=users.filter(u=>u.role==='sales');
+  const owners = users.filter(u=>u.role==='owner');
+  const mgrs   = users.filter(u=>u.role==='manager');
+  const sales  = users.filter(u=>u.role==='sales');
+  const roleLabel = r => r==='owner'?'👑 בעלים':r==='manager'?'👔 מנהל':'⭐ איש מכירות';
+  const canDel = me.role==='owner';
   const card=u=>{
     const dc=deals.filter(d=>d.userId===u.id).length;
     return`<div style="background:#faf8f4;border:1px solid var(--border);border-radius:9px;padding:13px 15px;display:flex;align-items:center;gap:11px">
-      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:${u.color}22;color:${u.color};flex-shrink:0">${u.emoji}</div>
-      <div style="flex:1"><div class="bold">${u.name}</div><div class="dim xs">${u.role==='manager'?'מנהל':'איש מכירות'} • ${dc} עסקאות</div></div>
-      ${u.id===me.id?'<span class="bdg bdg-o">אתה</span>':`<button class="bic" onclick="delUser('${u.id}')">🗑</button>`}
+      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:${u.color}22;color:${u.color};flex-shrink:0">${u.emoji||'👤'}</div>
+      <div style="flex:1">
+        <div class="bold">${u.name}</div>
+        <div class="dim xs">${roleLabel(u.role)} • ${u.email||''}</div>
+        <div class="dim xs">${dc} עסקאות</div>
+      </div>
+      ${u.id===me.id?'<span class="bdg bdg-o">אתה</span>':canDel&&u.role!=='owner'?`<button class="bic" onclick="delUser('${u.id}')">🗑</button>`:''}
     </div>`;
   };
-  el.innerHTML=`
-    <div class="bold s mb2">מנהלים</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;margin-bottom:20px">${mgr.map(card).join('')}</div>
-    <div class="bold s mb2">אנשי מכירות</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px">${sal.map(card).join('')}</div>`;
+  let html = '';
+  if(owners.length) html += `<div class="bold s mb2">בעלים</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px;margin-bottom:20px">${owners.map(card).join('')}</div>`;
+  if(mgrs.length)   html += `<div class="bold s mb2">מנהלים</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px;margin-bottom:20px">${mgrs.map(card).join('')}</div>`;
+  if(sales.length)  html += `<div class="bold s mb2">אנשי מכירות</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px">${sales.map(card).join('')}</div>`;
+  if(!owners.length&&!mgrs.length&&!sales.length) html='<div class="dim" style="padding:24px;text-align:center">אין חברי צוות עדיין — הוסף את הצוות שלך</div>';
+  el.innerHTML=html;
 }
 function pickEmoji(e,el){
   document.getElementById('u-new-emoji').value=e;
@@ -1205,13 +1247,54 @@ function pickEmoji(e,el){
   el.style.border='2px solid var(--gold)';
 }
 async function saveUser(){
-  const name=document.getElementById('u-new-name').value.trim();
-  if(!name){toast('הזן שם');return;}
+  const name  = document.getElementById('u-new-name').value.trim();
+  const email = document.getElementById('u-new-email').value.trim();
+  const pass  = document.getElementById('u-new-pass').value;
+  const role  = document.getElementById('u-new-role').value;
+  const errEl = document.getElementById('u-new-err');
+  errEl.textContent='';
+  if(!name||!email||!pass){ errEl.textContent='יש למלא את כל השדות'; return; }
+  if(pass.length<6){ errEl.textContent='הסיסמה חייבת להיות לפחות 6 תווים'; return; }
+
+  // Create user in Supabase Auth
+  const {data,error} = await _sb.auth.signUp({
+    email, password:pass,
+    options:{ data:{ full_name:name, owner_id:me.id, role:role } }
+  });
+  if(error){ errEl.textContent='שגיאה: '+error.message; return; }
+
+  // Save team member record
   const cols=['#a8720a','#0f5299','#186038','#a82820','#b55c08','#6d28d9'];
-  users.push({id:uid(),name,role:document.getElementById('u-new-role').value,emoji:document.getElementById('u-new-emoji').value,color:cols[users.length%cols.length]});
-  await saveAll(); closeOv('ov-user'); renderUsers(); toast('משתמש נוסף');
+  const newMember = {
+    id: data.user.id,
+    name, email, role,
+    emoji: role==='manager'?'👔':'⭐',
+    color: cols[users.length%cols.length],
+    owner_id: me.id
+  };
+  await _sb.from('team_members').upsert({
+    id: data.user.id,
+    owner_id: me.id,
+    member_id: data.user.id,
+    role, name, email
+  });
+
+  users.push(newMember);
+  closeOv('ov-user');
+  renderUsers();
+  // clear form
+  document.getElementById('u-new-name').value='';
+  document.getElementById('u-new-email').value='';
+  document.getElementById('u-new-pass').value='';
+  toast('✅ '+name+' נוסף לצוות');
 }
-async function delUser(id){if(!confirm('למחוק משתמש?'))return;users=users.filter(u=>u.id!==id);await saveAll();renderUsers();}
+async function delUser(id){
+  if(!confirm('למחוק משתמש מהצוות?')) return;
+  await _sb.from('team_members').delete().eq('member_id',id).eq('owner_id',me.id);
+  users=users.filter(u=>u.id!==id);
+  renderUsers();
+  toast('משתמש הוסר');
+}
 
 // ────────────────────────────────────────────
 //  CONFIG
