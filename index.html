@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f5f3ee; --white:#fff;
@@ -188,74 +187,147 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 <body>
 
 <!-- ══ LOGIN ══ -->
-<div id="login-wrap">
-  <div class="login-card">
-    <div class="login-logo">Reals<span style="background:var(--blue);color:#fff;font-family:Heebo,sans-serif;font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:4px;letter-spacing:.5px;vertical-align:middle;margin-right:4px">Cal</span></div>
-    <div class="login-sub">מערכת ניהול מכירות לנדל"ן</div>
+<div id="login-wrap" style="position:fixed;inset:0;z-index:999;display:flex;background:#f7f9f7;overflow:hidden;font-family:'Heebo',sans-serif">
 
-    <div class="login-seg" style="margin-bottom:20px">
-      <button id="tab-li" class="on" onclick="showAuthTab('login')">כניסה</button>
-      <button id="tab-su" onclick="showAuthTab('signup')">הרשמה</button>
+  <!-- BG decoration -->
+  <div style="position:absolute;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(6,95,70,.07),transparent 65%);pointer-events:none"></div>
+  <div style="position:absolute;bottom:-150px;right:400px;width:400px;height:400px;background:radial-gradient(circle,rgba(6,95,70,.05),transparent 65%);pointer-events:none"></div>
+
+  <!-- LEFT: landing -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:52px 64px;position:relative;z-index:1">
+
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:34px;height:34px;background:#065f46;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;color:#fff;letter-spacing:-.5px">RC</div>
+      <div style="font-size:1.05rem;font-weight:800;color:#111;letter-spacing:-.2px">Reals<span style="color:#065f46">Cal</span></div>
     </div>
 
-    <!-- LOGIN -->
-    <div id="auth-login">
-      <div style="margin-bottom:12px">
-        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">אימייל</label>
-        <input type="email" id="li-email" placeholder="name@company.com" dir="ltr"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
-          onkeydown="if(event.key==='Enter')doLogin()">
+    <!-- Headline -->
+    <div style="max-width:540px">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#d1fae5;border:1px solid #a7f3d0;border-radius:20px;padding:5px 14px;margin-bottom:28px">
+        <div style="width:5px;height:5px;border-radius:50%;background:#065f46"></div>
+        <span style="font-size:.67rem;font-weight:700;color:#064e3b;letter-spacing:.8px;text-transform:uppercase">לאנשי מכירות נדל"ן</span>
       </div>
-      <div style="margin-bottom:18px">
-        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">סיסמה</label>
-        <input type="password" id="li-pass" placeholder="••••••••" dir="ltr"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
-          onkeydown="if(event.key==='Enter')doLogin()">
+
+      <h1 style="font-family:'DM Serif Display',serif;font-size:clamp(2rem,3.5vw,3rem);line-height:1.1;color:#111;margin-bottom:14px;letter-spacing:-.5px">
+        ניהול מכירת דירות —<br>
+        <em style="font-style:italic;color:#065f46">בקלות, במהירות ובמחיר הנכון.</em>
+      </h1>
+
+      <p style="font-size:.88rem;color:#6b7280;line-height:1.75;margin-bottom:32px;max-width:420px">
+        מערכת חכמה שמחשבת את מחיר הסגירה הנכון לכל לקוח — לפי הפריסה שלו. הצוות שלך סוגר מהר יותר, בלי ניחושים ובלי טעויות.
+      </p>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button onclick="showAuthTab('signup')" style="padding:13px 28px;background:#065f46;color:#fff;border:none;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;font-weight:800;cursor:pointer;transition:.2s;box-shadow:0 4px 14px rgba(6,95,70,.25)" onmouseover="this.style.background='#064e3b';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#065f46';this.style.transform='translateY(0)'">
+          הרשמה חינם &larr;
+        </button>
+        <button onclick="showAuthTab('login')" style="padding:13px 22px;background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='#065f46';this.style.color='#065f46'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151'">
+          כניסה למערכת
+        </button>
       </div>
-      <button onclick="doLogin()"
-        style="width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;transition:.15s"
-        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        כניסה →
-      </button>
-      <div id="li-err" style="color:var(--red);font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
     </div>
 
-    <!-- SIGNUP -->
-    <div id="auth-signup" style="display:none">
-      <div style="margin-bottom:12px">
-        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">שם מלא</label>
-        <input type="text" id="su-name" placeholder="ישראל ישראלי"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'">
+    <!-- Stats -->
+    <div style="display:flex;gap:36px;align-items:center">
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:#111;letter-spacing:-.3px;line-height:1">&#x20aa;50K+</div>
+        <div style="font-size:.65rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-top:4px;font-weight:700">רווח נשמר לעסקה</div>
       </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">אימייל</label>
-        <input type="email" id="su-email" placeholder="name@company.com" dir="ltr"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'">
+      <div style="width:1px;height:36px;background:#e5e7eb"></div>
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:#111;letter-spacing:-.3px;line-height:1">0%</div>
+        <div style="font-size:.65rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-top:4px;font-weight:700">סיכון לשחיקה</div>
       </div>
-      <div style="margin-bottom:18px">
-        <label style="font-size:.7rem;font-weight:700;color:var(--ink3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">סיסמה (לפחות 6 תווים)</label>
-        <input type="password" id="su-pass" placeholder="••••••••" dir="ltr"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:9px;font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:.15s"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
-          onkeydown="if(event.key==='Enter')doSignup()">
+      <div style="width:1px;height:36px;background:#e5e7eb"></div>
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:#111;letter-spacing:-.3px;line-height:1">&lt;30s</div>
+        <div style="font-size:.65rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-top:4px;font-weight:700">מחיר לכל לקוח</div>
       </div>
-      <button onclick="doSignup()"
-        style="width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:9px;font-family:'Heebo',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;transition:.15s"
-        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        הרשמה ←
-      </button>
-      <div id="su-err" style="color:var(--red);font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
-      <div id="su-ok" style="color:var(--green);font-size:.82rem;margin-top:10px;text-align:center;display:none;line-height:1.5">✅ נשלח אימות לאימייל שלך<br><span style="font-size:.75rem;opacity:.7">בדוק את תיבת הדואר ולחץ על הקישור</span></div>
     </div>
+  </div>
 
-    <div style="text-align:center;margin-top:20px;font-size:.7rem;color:var(--ink3)">RealsCal © 2025</div>
+  <!-- DIVIDER -->
+  <div style="width:1px;background:#e5e7eb;flex-shrink:0"></div>
+
+  <!-- RIGHT: auth -->
+  <div style="width:440px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:48px 44px;background:#fff;position:relative;z-index:1">
+    <div style="width:100%">
+
+      <div style="margin-bottom:26px">
+        <h2 id="auth-heading" style="font-family:'DM Serif Display',serif;font-size:2.1rem;color:#111;margin-bottom:8px;letter-spacing:-.5px">ברוך הבא</h2>
+        <p id="auth-subheading" style="font-size:.82rem;color:#9ca3af;margin:0">הכנס לחשבון שלך</p>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:2px solid #f3f4f6;margin-bottom:26px">
+        <button id="tab-li" onclick="showAuthTab('login')" style="flex:1;padding:10px;border:none;background:transparent;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;color:#065f46;border-bottom:2px solid #065f46;margin-bottom:-2px;transition:.15s">כניסה</button>
+        <button id="tab-su" onclick="showAuthTab('signup')" style="flex:1;padding:10px;border:none;background:transparent;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;color:#9ca3af;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s">הרשמה</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="auth-login">
+        <div style="margin-bottom:14px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">אימייל</label>
+          <input type="email" id="li-email" placeholder="name@company.com" dir="ltr"
+            style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
+            onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'"
+            onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div style="margin-bottom:22px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">סיסמה</label>
+          <input type="password" id="li-pass" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" dir="ltr"
+            style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
+            onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'"
+            onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button onclick="doLogin()"
+          style="width:100%;padding:13px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(6,95,70,.2)"
+          onmouseover="this.style.background='#064e3b'" onmouseout="this.style.background='#065f46'">
+          כניסה &rarr;
+        </button>
+        <div id="li-err" style="color:#ef4444;font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
+      </div>
+
+      <!-- SIGNUP -->
+      <div id="auth-signup" style="display:none">
+        <div style="margin-bottom:12px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">שם מלא</label>
+          <input type="text" id="su-name" placeholder="ישראל ישראלי"
+            style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
+            onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">אימייל</label>
+          <input type="email" id="su-email" placeholder="name@company.com" dir="ltr"
+            style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
+            onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
+        </div>
+        <div style="margin-bottom:22px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">סיסמה (לפחות 6 תווים)</label>
+          <input type="password" id="su-pass" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" dir="ltr"
+            style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
+            onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'"
+            onkeydown="if(event.key==='Enter')doSignup()">
+        </div>
+        <button onclick="doSignup()"
+          style="width:100%;padding:13px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(6,95,70,.2)"
+          onmouseover="this.style.background='#064e3b'" onmouseout="this.style.background='#065f46'">
+          יצירת חשבון &larr;
+        </button>
+        <div id="su-err" style="color:#ef4444;font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
+        <div id="su-ok" style="color:#065f46;font-size:.82rem;margin-top:10px;text-align:center;display:none;line-height:1.6">&#x2705; נשלח אימות לאימייל שלך<br><span style="opacity:.6;font-size:.75rem">בדוק את תיבת הדואר ולחץ על הקישור</span></div>
+      </div>
+
+      <div style="text-align:center;margin-top:28px;font-size:.67rem;color:#d1d5db">RealsCal &copy; 2025</div>
+    </div>
   </div>
 </div>
-
 <!-- ══ APP ══ -->
 <div id="app" style="display:none">
   <header>
@@ -395,7 +467,7 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 // ════════════════════════════════════════════
 //  SUPABASE INIT
 // ════════════════════════════════════════════
-const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTM1MDgsImV4cCI6MjA1Nzg4OTUwOH0.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDU0ODAsImV4cCI6MjA4OTM4MTQ4MH0.XCdRaM8aX1QHgyoTdHK9enW608ijaoSBTGL6ATQ-T0U');
 
 // per-user localStorage keys
 function SK(uid){
@@ -437,18 +509,61 @@ function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100
 function bankFloor(apt){ return apt.area*apt.sqm+(apt.ext||0); }
 function targetNet(apt){ return bankFloor(apt)*(1+cfg.premium/100); }
 function floorGross(apt,pmts){ return targetNet(apt)/npvF(pmts,cfg.rate)*(1+cfg.vat/100); }
-function saveAll(){
+// ════════════════════════════════════════════
+//  SUPABASE DATA LAYER
+// ════════════════════════════════════════════
+async function saveAll(){
   if(!me) return;
-  const k=SK(me.id);
-  lsSet(k.cfg,cfg); lsSet(k.projects,projects); lsSet(k.apts,apts); lsSet(k.deals,deals);
+  const uid = me.id;
+  // Save config
+  await _sb.from('user_config').upsert({user_id:uid, config:cfg});
+  // Save projects
+  if(projects.length){
+    await _sb.from('projects').upsert(projects.map(p=>({...p,user_id:uid})));
+  }
+  // Save apartments
+  if(apts.length){
+    await _sb.from('apartments').upsert(apts.map(a=>({
+      id:a.id, user_id:uid, proj_id:a.projId,
+      num:a.num, floor:a.floor, type:a.type,
+      area:a.area, park:a.park, sqm:a.sqm,
+      ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false
+    })));
+  }
+  // Save deals
+  if(deals.length){
+    await _sb.from('deals').upsert(deals.map(d=>({id:d.id, user_id:uid, data:d})));
+  }
 }
-function loadUserData(){
+
+async function deleteFromCloud(table, id){
   if(!me) return;
-  const k=SK(me.id);
-  cfg      = lsGet(k.cfg,      {premium:5,rate:7,vat:18,target:20});
-  projects = lsGet(k.projects, []);
-  apts     = lsGet(k.apts,     []);
-  deals    = lsGet(k.deals,    []);
+  await _sb.from(table).delete().eq('id',id).eq('user_id',me.id);
+}
+
+async function loadUserData(){
+  if(!me) return;
+  // Load config
+  const {data:cfgRow} = await _sb.from('user_config').select('config').eq('user_id',me.id).single();
+  cfg = cfgRow?.config || {premium:5,rate:7,vat:18,target:20};
+
+  // Load projects
+  const {data:projRows} = await _sb.from('projects').select('*').eq('user_id',me.id);
+  projects = (projRows||[]).map(r=>({
+    id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[]
+  }));
+
+  // Load apartments
+  const {data:aptRows} = await _sb.from('apartments').select('*').eq('user_id',me.id);
+  apts = (aptRows||[]).map(r=>({
+    id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
+    type:r.type, area:r.area, park:r.park, sqm:r.sqm,
+    ext:r.ext, mkt:r.mkt, sold:r.sold
+  }));
+
+  // Load deals
+  const {data:dealRows} = await _sb.from('deals').select('data').eq('user_id',me.id);
+  deals = (dealRows||[]).map(r=>r.data);
 }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
 function openOv(id){ document.getElementById(id).classList.add('on'); }
@@ -473,7 +588,7 @@ async function doLogin(){
   if(!email||!pass){ err.textContent='יש למלא אימייל וסיסמה'; return; }
   const {data,error} = await _sb.auth.signInWithPassword({email,password:pass});
   if(error){ err.textContent = 'פרטים שגויים — נסה שוב'; return; }
-  enterApp(data.user);
+  await enterApp(data.user);
 }
 
 async function doSignup(){
@@ -493,7 +608,7 @@ async function doSignup(){
   ok.style.display='block';
 }
 
-function enterApp(user){
+async function enterApp(user){
   me = {
     id:    user.id,
     name:  user.user_metadata?.full_name || user.email.split('@')[0],
@@ -503,15 +618,18 @@ function enterApp(user){
     color: '#a8720a',
   };
   users = [me];
-  loadUserData();
+  // show loading
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--ink3)"><div style="font-size:2rem;margin-bottom:12px">⏳</div>טוען נתונים...</div>';
+  await loadUserData();
   initApp();
 }
 
 async function logout(){
   await _sb.auth.signOut();
-  me=null; projects=[]; apts=[]; deals=[]; cfg={premium:5,rate:7,vat:18,target:20};
+  me=null; projects=[]; apts=[]; deals=[];
+  cfg={premium:5,rate:7,vat:18,target:20};
   document.getElementById('app').style.display='none';
   document.getElementById('login-wrap').style.display='flex';
   svProj=null; svApt=null;
@@ -879,7 +997,7 @@ function openProjectModal(id){
   openOv('ov-project');
 }
 
-function saveProject(){
+async function saveProject(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){ toast('חובה להזין שם פרויקט'); return; }
   const proj={
@@ -892,17 +1010,17 @@ function saveProject(){
   if(editProjId) projects=projects.map(x=>x.id===editProjId?proj:x);
   else projects.push(proj);
   editProjId=null;
-  saveAll();
+  await saveAll();
   closeOv('ov-project');
   renderProjects();
   renderDash();
   toast('פרויקט נשמר');
 }
-function delProject(id){
+async function delProject(id){
   if(apts.find(a=>a.projId===id)){ toast('יש דירות בפרויקט — מחק אותן קודם'); return; }
   if(!confirm('למחוק פרויקט?')) return;
   projects=projects.filter(p=>p.id!==id);
-  saveAll(); renderProjects(); renderDash();
+  await saveAll(); renderProjects(); renderDash();
 }
 
 // ────────────────────────────────────────────
@@ -946,7 +1064,7 @@ function aptPreview(){
     <span style="color:var(--red);font-weight:800">רצפת מכירה: ${fmt(flr)}</span>
     ${mkt?` &nbsp;|&nbsp; <span style="color:var(--green);font-weight:800">מרווח מחירון: ${fmt(buf)} (${(buf/mkt*100).toFixed(1)}%)</span>`:''}`;
 }
-function saveApt(){
+async function saveApt(){
   const num  = document.getElementById('a-num').value.trim();
   const area = +document.getElementById('a-area').value;
   const sqm  = +document.getElementById('a-sqm').value;
@@ -968,17 +1086,17 @@ function saveApt(){
   };
   if(editAptId) apts=apts.map(a=>a.id===editAptId?apt:a);
   else apts.push(apt);
-  saveAll();
+  await saveAll();
   closeOv('ov-apt');
   renderProjects();
   renderDash();
   toast('דירה '+num+' נשמרה');
 }
-function delApt(id){
+async function delApt(id){
   if(deals.find(d=>d.aptId===id)){ toast('קיימות עסקאות לדירה — לא ניתן למחוק'); return; }
   if(!confirm('למחוק דירה?')) return;
   apts=apts.filter(a=>a.id!==id);
-  saveAll(); renderProjects(); renderDash();
+  await saveAll(); renderProjects(); renderDash();
 }
 
 // ────────────────────────────────────────────
@@ -1039,8 +1157,8 @@ function renderDeals(){
     </tr></tfoot>
   </table></div>`;
 }
-function approveD(id){ deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d); saveAll(); renderDeals(); renderDash(); toast('עסקה אושרה'); }
-function deleteD(id){
+async function approveD(id){ deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d); await saveAll(); renderDeals(); renderDash(); toast('עסקה אושרה'); }
+async function deleteD(id){
   // manager-only: cancel deal (restore apt to available)
   const d=deals.find(x=>x.id===id);
   if(!d) return;
@@ -1054,7 +1172,8 @@ function deleteD(id){
   const a=apts.find(x=>x.id===d.aptId);
   if(a){ a.sold=false; }
   deals=deals.filter(x=>x.id!==id);
-  saveAll(); renderDeals(); renderDash();
+  await deleteFromCloud('deals', id);
+  await saveAll(); renderDeals(); renderDash();
   toast(wasApproved ? '↩ עסקה בוטלה — הדירה חזרה לפנויות' : '🗑 עסקה נמחקה');
 }
 
@@ -1085,22 +1204,22 @@ function pickEmoji(e,el){
   document.querySelectorAll('#ov-user span[onclick]').forEach(s=>s.style.border='2px solid transparent');
   el.style.border='2px solid var(--gold)';
 }
-function saveUser(){
+async function saveUser(){
   const name=document.getElementById('u-new-name').value.trim();
   if(!name){toast('הזן שם');return;}
   const cols=['#a8720a','#0f5299','#186038','#a82820','#b55c08','#6d28d9'];
   users.push({id:uid(),name,role:document.getElementById('u-new-role').value,emoji:document.getElementById('u-new-emoji').value,color:cols[users.length%cols.length]});
-  saveAll(); closeOv('ov-user'); renderUsers(); toast('משתמש נוסף');
+  await saveAll(); closeOv('ov-user'); renderUsers(); toast('משתמש נוסף');
 }
-function delUser(id){if(!confirm('למחוק משתמש?'))return;users=users.filter(u=>u.id!==id);saveAll();renderUsers();}
+async function delUser(id){if(!confirm('למחוק משתמש?'))return;users=users.filter(u=>u.id!==id);await saveAll();renderUsers();}
 
 // ────────────────────────────────────────────
 //  CONFIG
 // ────────────────────────────────────────────
-function saveCfg(){
+async function saveCfg(){
   const g=(id)=>+document.getElementById(id)?.value;
   cfg={...cfg,premium:g('c-prem')||cfg.premium,rate:g('c-rate')||cfg.rate,vat:g('c-vat')||cfg.vat,target:g('c-tgt')||cfg.target};
-  saveAll(); renderProjects(); renderDash();
+  await saveAll(); renderProjects(); renderDash();
 }
 
 // ────────────────────────────────────────────
@@ -1354,7 +1473,7 @@ function calcCheckOffer(){
   el.innerHTML = statusHtml + closeBtnHtml;
 }
 
-function submitDealMgr(offerPrice){
+async function submitDealMgr(offerPrice){
   if(!calcApt || !calcProj || !me) return;
   const f       = npvF(calcPmts, cfg.rate);
   const flrG    = targetNet(calcApt)/f*(1+cfg.vat/100);
@@ -1410,7 +1529,7 @@ ${aptInfo}
   deals.push(deal);
   const apt = apts.find(a=>a.id===calcApt.id);
   if(apt) apt.sold = true;
-  saveAll();
+  await saveAll();
 
   // reset
   calcApt=null; calcProj=null; calcPmts=[];
@@ -1659,7 +1778,7 @@ function checkOffer(){
 // ════════════════════════════════════════════
 //  SUBMIT DEAL (from sales view)
 // ════════════════════════════════════════════
-function submitDeal(offerPrice){
+async function submitDeal(offerPrice){
   if(!svApt || !svProj || !me) return;
   if(!confirm('לאשר עסקה לדירה ' + svApt.num + ' ב-' + fmt(offerPrice) + '?')) return;
 
@@ -1698,7 +1817,7 @@ function submitDeal(offerPrice){
   // mark apt as sold
   const apt = apts.find(a=>a.id===svApt.id);
   if(apt) apt.sold = true;
-  saveAll();
+  await saveAll();
 
   // reset calculator
   svApt=null; svProj=null; svPmts=[];
