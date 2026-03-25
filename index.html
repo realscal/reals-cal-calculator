@@ -524,7 +524,7 @@ async function saveAll(){
       id:a.id, user_id:ownerId, proj_id:a.projId,
       num:a.num, floor:a.floor, type:a.type,
       area:a.area, park:a.park, sqm:a.sqm,
-      ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false
+      ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false, reserved:a.reserved||false
     })));
   }
   // Save deals
@@ -556,7 +556,7 @@ async function loadUserData(){
   apts = (aptRows||[]).map(r=>({
     id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
     type:r.type, area:r.area, park:r.park, sqm:r.sqm,
-    ext:r.ext, mkt:r.mkt, sold:r.sold
+    ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
   }));
 
   // Load deals
@@ -957,7 +957,8 @@ function renderProjects(){
   el.innerHTML = projects.map(p=>{
     const projApts = apts.filter(a=>a.projId===p.id);
     const sold     = projApts.filter(a=>a.sold).length;
-    const avail    = projApts.filter(a=>!a.sold).length;
+    const reserved = projApts.filter(a=>a.reserved&&!a.sold).length;
+    const avail    = projApts.filter(a=>!a.sold&&!a.reserved).length;
     const f        = npvF(p.payments, cfg.rate);
     return `
     <div class="card mb3">
@@ -967,6 +968,7 @@ function renderProjects(){
           ${p.loc?`<span class="bdg bdg-gr">${p.loc}</span>`:''}
           <span class="bdg bdg-b">${projApts.length} דירות</span>
           <span class="bdg bdg-g">${avail} פנויות</span>
+          ${reserved?`<span class="bdg bdg-b">${reserved} מוקפאות</span>`:''}
           ${sold?`<span class="bdg bdg-or">${sold} נמכרו</span>`:''}
         </div>
         <div class="fc">
@@ -1003,7 +1005,7 @@ function renderProjects(){
               <td class="cred bold">${fmt(flr)}</td>
               <td class="bold">${a.mkt?fmt(a.mkt):'—'}</td>
               <td>${a.mkt?`<span class="bdg ${buf>=0?'bdg-g':'bdg-r'}">${fmt(buf)}</span>`:'—'}</td>
-              <td><span class="bdg ${a.sold?'bdg-or':'bdg-g'}">${a.sold?'נמכרה':'פנויה'}</span></td>
+              <td><span class="bdg ${a.sold?'bdg-or':a.reserved?'bdg-b':'bdg-g'}">${a.sold?'✅ נמכרה':a.reserved?'🟡 מוקפאת':'🟢 פנויה'}</span></td>
               <td class="fc">
                 <button class="bic" onclick="openAptModal('${p.id}','${a.id}')">✏️</button>
                 <button class="bic" onclick="delApt('${a.id}')">🗑</button>
@@ -1195,12 +1197,18 @@ function renderDeals(){
 async function approveD(id){
   deals=deals.map(d=>d.id===id?{...d,status:'PND'}:d);
   await saveAll(); renderDeals(); renderDash();
-  toast('✅ טופס הרשמה אושר — ממתין לחתימת חוזה');
+  toast('✅ טופס הרשמה אושר — עורכי דין עובדים על החוזה');
 }
 async function signContract(id){
   if(!confirm('לאשר חתימת חוזה? הדירה תסומן כנמכרה סופית.')) return;
-  deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d);
-  await saveAll(); renderDeals(); renderDash();
+  const d = deals.find(x=>x.id===id);
+  deals=deals.map(x=>x.id===id?{...x,status:'APP'}:x);
+  // Mark apt as sold
+  if(d){
+    const apt=apts.find(a=>a.id===d.aptId);
+    if(apt){ apt.sold=true; apt.reserved=false; }
+  }
+  await saveAll(); renderDeals(); renderDash(); renderProjects();
   toast('🎉 חוזה נחתם! הדירה נמכרה סופית');
 }
 async function deleteD(id){
@@ -1215,7 +1223,7 @@ async function deleteD(id){
   if(!confirm(confirmMsg)) return;
   // restore apt to available
   const a=apts.find(x=>x.id===d.aptId);
-  if(a){ a.sold=false; }
+  if(a){ a.sold=false; a.reserved=false; }
   deals=deals.filter(x=>x.id!==id);
   await deleteFromCloud('deals', id);
   await saveAll(); renderDeals(); renderDash();
@@ -1392,7 +1400,7 @@ function renderCalcProjects(){
     return;
   }
   grid.innerHTML = projects.map(p => {
-    const cnt = apts.filter(a=>a.projId===p.id && !a.sold).length;
+    const cnt = apts.filter(a=>a.projId===p.id && !a.sold && !a.reserved).length;
     const sel = calcProj?.id === p.id;
     return `<div class="proj-card${sel?' sel':''}" onclick="selectCalcProj('${p.id}')">
       <div class="pname">${p.name}</div>
@@ -1425,7 +1433,7 @@ function renderCalcApts(){
   const grid = document.getElementById('calc-apt-grid');
   const noA  = document.getElementById('calc-no-apt');
   if(!grid || !calcProj) return;
-  const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold);
+  const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold && !a.reserved);
   if(!avail.length){
     grid.innerHTML = '<div class="ib ib-or s">אין דירות פנויות בפרויקט</div>';
     return;
@@ -1769,7 +1777,7 @@ function renderSVProjects(){
   if(!visibleProjs.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
   if(noP) noP.style.display='none';
   grid.innerHTML=visibleProjs.map(p=>{
-    const cnt=apts.filter(a=>a.projId===p.id&&!a.sold).length;
+    const cnt=apts.filter(a=>a.projId===p.id&&!a.sold&&!a.reserved).length;
     const sel=svProj?.id===p.id;
     return`<div class="proj-card${sel?' sel':''}" onclick="selectProj('${p.id}')">
       <div class="pname">${p.name}</div>
@@ -1798,7 +1806,7 @@ function renderSVApts(){
   const grid=document.getElementById('sv-apt-grid');
   const noA=document.getElementById('sv-no-apt');
   if(!grid||!svProj) return;
-  const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold);
+  const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold&&!a.reserved);
   if(!avail.length){grid.innerHTML='';if(noA)noA.style.display='block';return;}
   if(noA)noA.style.display='none';
   grid.innerHTML=avail.map(a=>{
@@ -1943,9 +1951,9 @@ async function submitDeal(offerPrice){
   };
 
   deals.push(deal);
-  // mark apt as sold
+  // mark apt as RESERVED (not sold yet)
   const apt = apts.find(a=>a.id===svApt.id);
-  if(apt) apt.sold = true;
+  if(apt){ apt.reserved=true; apt.sold=false; }
   await saveAll();
 
   // reset calculator
