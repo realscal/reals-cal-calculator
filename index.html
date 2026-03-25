@@ -898,7 +898,7 @@ function renderAll(){
 // ────────────────────────────────────────────
 function renderDash(){
   const app=deals.filter(d=>d.status==='APP');
-  const pnd=deals.filter(d=>d.status==='PND');
+  const pnd=deals.filter(d=>d.status==='PND'||d.status==='REG');
   const rev=app.reduce((a,d)=>a+d.gross,0);
   const tpct=cfg.target?Math.round(app.length/cfg.target*100):0;
   const avgEx=app.length?app.reduce((a,d)=>a+(d.tNet?d.excess/d.tNet*100:0),0)/app.length:0;
@@ -911,7 +911,8 @@ function renderDash(){
   s('k5',projects.length);
 
   const pb=document.getElementById('pnd-badge');
-  if(pb){pb.textContent=pnd.length;pb.style.display=pnd.length?'inline-flex':'none';}
+  const pendingCount=deals.filter(d=>d.status==='PND'||d.status==='REG').length;
+  if(pb){pb.textContent=pendingCount;pb.style.display=pendingCount?'inline-flex':'none';}
 
   // Bar
   const bc=document.getElementById('cbar');
@@ -1191,7 +1192,17 @@ function renderDeals(){
     </tr></tfoot>
   </table></div>`;
 }
-async function approveD(id){ deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d); await saveAll(); renderDeals(); renderDash(); toast('עסקה אושרה'); }
+async function approveD(id){
+  deals=deals.map(d=>d.id===id?{...d,status:'PND'}:d);
+  await saveAll(); renderDeals(); renderDash();
+  toast('✅ טופס הרשמה אושר — ממתין לחתימת חוזה');
+}
+async function signContract(id){
+  if(!confirm('לאשר חתימת חוזה? הדירה תסומן כנמכרה סופית.')) return;
+  deals=deals.map(d=>d.id===id?{...d,status:'APP'}:d);
+  await saveAll(); renderDeals(); renderDash();
+  toast('🎉 חוזה נחתם! הדירה נמכרה סופית');
+}
 async function deleteD(id){
   // manager-only: cancel deal (restore apt to available)
   const d=deals.find(x=>x.id===id);
@@ -1752,7 +1763,7 @@ function renderSVProjects(){
 
   // Sales rep sees only assigned projects (or all if owner/manager)
   const visibleProjs = (me.role==='sales')
-    ? projects.filter(p => !p.assignedSales?.length || p.assignedSales.includes(me.id))
+    ? projects.filter(p => p.assignedSales?.includes(me.id))
     : projects;
 
   if(!visibleProjs.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
@@ -1884,7 +1895,7 @@ function checkOffer(){
         ${stillLeft?`<div style="font-size:.78rem;color:rgba(255,255,255,.45);margin-top:4px">נותרו עוד ${stillLeft}% ניתנים להנחה</div>`:''}
       </div>
       <button onclick="submitDeal(${offer})" style="width:100%;padding:14px;background:#e8c84a;color:#1a1714;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.3px;transition:.15s" onmouseover="this.style.background='#d4b038'" onmouseout="this.style.background='#e8c84a'">
-        🤝 אישור עסקה — ${fmt(offer)}
+        📋 שלח טופס הרשמה — ${fmt(offer)}
       </button>`
     : `<div style="background:linear-gradient(135deg,#6b1a14,#a82820);border-radius:12px;padding:20px 22px;text-align:center;color:#fff">
         <div style="font-size:1.1rem;font-weight:800;margin-bottom:6px">🚫 לא ניתן לסגור</div>
@@ -1927,7 +1938,7 @@ async function submitDeal(offerPrice){
     npv:      npvNet,
     tNet:     tNet,
     excess:   excess,
-    status:   'PND',
+    status:   'REG',  // טופס הרשמה — ממתין לאישור מנהל
     date:     new Date().toLocaleDateString('he-IL'),
   };
 
@@ -1943,7 +1954,7 @@ async function submitDeal(offerPrice){
   document.getElementById('s2').style.display='none';
   document.getElementById('s3').style.display='none';
   renderSVProjects();
-  toast('✅ העסקה נשלחה לאישור המנהל!');
+  toast('📋 טופס הרשמה נשלח למנהל!');
 }
 
 // ════════════════════════════════════════════
