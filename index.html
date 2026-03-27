@@ -620,12 +620,13 @@ async function enterApp(user){
     const ownerMeta = user.user_metadata || {};
     me = {
       id:       user.id,
+      memberId: memberRow.member_id,
       name:     memberRow.name || ownerMeta.full_name || user.email.split('@')[0],
       email:    user.email,
       role:     memberRow.role,
       emoji:    memberRow.role==='manager' ? '👔' : '⭐',
       color:    '#0f5299',
-      owner_id: memberRow.owner_id,  // load data from owner's account
+      owner_id: memberRow.owner_id
     };
   } else {
     // This is an owner
@@ -1769,9 +1770,15 @@ function renderSVProjects(){
   const noP=document.getElementById('sv-no-proj');
   if(!grid) return;
 
-  // Sales rep sees only assigned projects (or all if owner/manager)
+  // Sales rep sees only assigned projects
+  // me.id = Supabase user UUID, assigned_sales stores member_id (same UUID)
   const visibleProjs = (me.role==='sales')
-    ? projects.filter(p => p.assignedSales?.includes(me.id))
+    ? projects.filter(p => {
+        const assigned = p.assignedSales || [];
+        return assigned.length === 0
+          ? false  // no assignment = not visible
+          : assigned.some(id => id === me.id || id === me.memberId);
+      })
     : projects;
 
   if(!visibleProjs.length){grid.innerHTML='';if(noP)noP.style.display='block';return;}
