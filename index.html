@@ -612,8 +612,8 @@ async function enterApp(user){
   document.getElementById('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--ink3)"><div style="font-size:2rem;margin-bottom:12px">⏳</div>טוען נתונים...</div>';
 
   // Check if this user is a team member of someone else
-  const {data:memberRow} = await _sb.from('team_members')
-    .select('*').eq('member_id', user.id).single();
+  const {data:memberRow, error:memberErr} = await _sb.from('team_members')
+    .select('*').eq('member_id', user.id).maybeSingle();
 
   if(memberRow){
     // This is a team member — load owner's data
@@ -1599,7 +1599,7 @@ function calcCheckOffer(){
   const givenDiscC = mktC ? ((mktC-offer)/mktC*100).toFixed(1) : null;
   const closeBtnHtml = `
     <button onclick="submitDealMgr(${offer})" style="width:100%;margin-top:10px;padding:14px;background:#e8c84a;color:#1a1714;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.15s" onmouseover="this.style.background='#d4b038'" onmouseout="this.style.background='#e8c84a'">
-      🤝 סגור עסקה — ${fmt(offer)}${givenDiscC?' (הנחה '+givenDiscC+'%)':''}
+      📋 צור טופס הרשמה — ${fmt(offer)}${givenDiscC?' (הנחה '+givenDiscC+'%)':''}
     </button>`;
   el.innerHTML = statusHtml + closeBtnHtml;
 }
@@ -1619,12 +1619,12 @@ ${aptInfo}
 שחיקה: ${fmt(offerPrice-flrG)}
 
 כמנהל, ביכולתך לאשר. האם להמשיך?`
-    : `סגירת עסקה
+    : `טופס הרשמה
 ${aptInfo}
 
 מחיר: ${fmt(offerPrice)}
 
-האם לאשר?`;
+לאחר האישור הדירה תוקפא ותעבור לשלב עורכי דין. האם להמשיך?`;
   if(!confirm(warnMsg)) return;
 
   const priceNet = offerPrice/(1+cfg.vat/100);
@@ -1653,13 +1653,13 @@ ${aptInfo}
     tNet:     tNet,
     excess:   excess,
     belowFloor: isBelowFloor,
-    status:   'APP', // manager deals auto-approved
+    status:   'REG', // טופס הרשמה — ממתין לחתימת חוזה
     date:     new Date().toLocaleDateString('he-IL'),
   };
 
   deals.push(deal);
   const apt = apts.find(a=>a.id===calcApt.id);
-  if(apt) apt.sold = true;
+  if(apt){ apt.reserved=true; apt.sold=false; }
   await saveAll();
 
   // reset
@@ -1668,7 +1668,7 @@ ${aptInfo}
   document.getElementById('calc-placeholder').style.display='block';
   renderAll();
   showTab('deals', null);
-  toast(isBelowFloor ? '⚠️ עסקה נסגרה מתחת לרצפה — מאושרת אוטומטית' : '✅ עסקה נסגרה ואושרה!');
+  toast(isBelowFloor ? '⚠️ טופס הרשמה נוצר מתחת לרצפה' : '📋 טופס הרשמה נוצר — ממתין לחתימת חוזה');
 }
 
 // ────────────────────────────────────────────
