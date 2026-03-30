@@ -1135,11 +1135,14 @@ async function saveApt(){
 async function delApt(id){
   if(deals.find(d=>d.aptId===id)){ toast('קיימות עסקאות לדירה — לא ניתן למחוק'); return; }
   if(!confirm('למחוק דירה?')) return;
-  apts=apts.filter(a=>a.id!==id);
-  // Delete directly from Supabase
   const ownerId = me.owner_id || me.id;
-  await _sb.from('apartments').delete().eq('id',id).eq('user_id',ownerId);
-  await saveAll(); renderProjects(); renderDash();
+  // Delete from Supabase FIRST
+  const {error} = await _sb.from('apartments').delete().eq('id',id).eq('user_id',ownerId);
+  if(error){ toast('שגיאה במחיקה: '+error.message); return; }
+  // Then remove from local state
+  apts=apts.filter(a=>a.id!==id);
+  renderProjects(); renderDash();
+  toast('🗑 דירה נמחקה');
 }
 
 // ────────────────────────────────────────────
