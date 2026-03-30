@@ -1153,10 +1153,13 @@ function renderDeals(){
 
   const el=document.getElementById('deals-tbl');
   if(!el) return;
-  if(!deals.length){el.innerHTML='<div class="empty dim" style="padding:40px;text-align:center">אין עסקאות עדיין</div>';return;}
+  if(!deals.length){el.innerHTML='<div class="empty dim" style="padding:40px;text-align:center">אין טפסי הרשמה ועסקאות עדיין</div>';return;}
 
-  // sort: pending first, then approved
-  const sorted=[...deals].sort((a,b)=>(a.status==='PND'?0:1)-(b.status==='PND'?0:1));
+  // sort: REG first, then PND, then APP
+  const sorted=[...deals].sort((a,b)=>{
+    const o={REG:0,PND:1,APP:2};
+    return (o[a.status]||0)-(o[b.status]||0);
+  });
 
   el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr>
@@ -1165,31 +1168,38 @@ function renderDeals(){
     </tr></thead>
     <tbody>${sorted.map(d=>{
       const seller=users.find(u=>u.id===d.userId);
+      const isReg = d.status==='REG';
       const isPnd = d.status==='PND';
-      return`<tr style="${isPnd?'background:#fffbf0':''}">
-        <td>
-          <span class="bdg ${isPnd?'bdg-or':'bdg-g'}">${isPnd?'⏳ ממתין לאישור':'✅ מאושר'}</span>
-        </td>
+      const isApp = d.status==='APP';
+      const rowBg = isReg?'background:#eff6ff':isPnd?'background:#fffbf0':'';
+      const badge = isReg
+        ? '<span class="bdg bdg-b">📋 טופס הרשמה</span>'
+        : isPnd
+          ? '<span class="bdg bdg-or">✍️ ממתין לחתימה</span>'
+          : '<span class="bdg bdg-g">✅ נחתם חוזה</span>';
+      return`<tr style="${rowBg}">
+        <td>${badge}</td>
         <td class="dim xs">${d.projName||'—'}</td>
-        <td><strong>דירה ${d.aptNum}</strong><br><span class="dim xs">${d.aptType}</span></td>
+        <td><strong>דירה ${d.aptNum}</strong><br><span class="dim xs">${d.aptType||''}</span></td>
         <td>${seller?seller.emoji+' '+seller.name:'—'}</td>
         <td><strong style="font-size:1.05rem">${fmt(d.gross)}</strong></td>
         <td>
           ${d.discAmt?`<div class="bold cred" style="font-size:1rem">${fmt(d.discAmt)}</div>
           <div class="dim xs">${d.discPct}% מהמחירון</div>`:'<span class="dim xs">—</span>'}
         </td>
-        <td class="xs dim">${d.pmts.map(p=>`${p.pct}% / ${p.months}m`).join('<br>')}</td>
-        <td class="dim xs">${d.date}</td>
+        <td class="xs dim">${(d.pmts||[]).map(p=>`${p.pct}% / ${p.months}m`).join('<br>')}</td>
+        <td class="dim xs">${d.date||''}</td>
         <td>
-          <div class="fc" style="gap:5px">
-            ${isPnd?`<button class="btn bgreen bsm" onclick="approveD('${d.id}')">✓ אשר</button>`:''}
-            <button class="btn bdel" onclick="deleteD('${d.id}')" title="${isPnd?'מחק עסקה':'בטל עסקה — הדירה תחזור לפנויות'}">${isPnd?'✕':'↩ בטל'}</button>
+          <div class="fc" style="gap:5px;flex-wrap:wrap">
+            ${isReg?`<button class="btn bn bsm" onclick="approveD('${d.id}')" style="white-space:nowrap">✓ אשר הרשמה</button>`:''}
+            ${isPnd?`<button class="btn bgreen bsm" onclick="signContract('${d.id}')" style="white-space:nowrap">✍️ נחתם חוזה</button>`:''}
+            <button class="btn bdel" onclick="deleteD('${d.id}')" title="בטל — הדירה תחזור לפנויות">${isApp?'↩ בטל':'✕'}</button>
           </div>
         </td>
       </tr>`;
     }).join('')}</tbody>
     <tfoot><tr style="background:#f5f3ee">
-      <td colspan="4" style="padding:10px;font-weight:700;font-size:.83rem">סה"כ מאושרות</td>
+      <td colspan="4" style="padding:10px;font-weight:700;font-size:.83rem">סה"כ חוזים חתומים</td>
       <td style="padding:10px;font-weight:800;font-size:1rem;color:var(--green)">${fmt(totalRev)}</td>
       <td colspan="4"></td>
     </tr></tfoot>
