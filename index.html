@@ -548,7 +548,7 @@ async function loadUserData(){
   // Load projects
   const {data:projRows} = await _sb.from('projects').select('*').eq('user_id',ownerId);
   projects = (projRows||[]).map(r=>({
-    id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[]
+    id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[], assignedSales:r.assigned_sales||[]
   }));
 
   // Load apartments
