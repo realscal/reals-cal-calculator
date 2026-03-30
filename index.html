@@ -337,6 +337,7 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
       <div id="role-switch" style="display:none">
         <button id="switch-btn" onclick="switchRole()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.78rem;font-weight:700;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.18)'" onmouseout="this.style.background='rgba(255,255,255,.1)'"></button>
       </div>
+      <div id="plan-badge" style="display:none;background:rgba(232,200,74,.15);color:#e8c84a;border:1px solid rgba(232,200,74,.3);border-radius:12px;padding:3px 10px;font-size:.7rem;font-weight:800;letter-spacing:.3px"></div>
       <div class="user-pill" onclick="logout()">
         <div class="dot" id="u-dot"></div>
         <span id="u-name"></span>
@@ -461,6 +462,17 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
 // ════════════════════════════════════════════
 //  STORAGE
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  PLANS
+// ════════════════════════════════════════════
+const PLANS = {
+  basic:      { name:'Basic',      maxProjects:1,  maxUsers:4,  price:1500 },
+  pro:        { name:'Pro',        maxProjects:5,  maxUsers:8,  price:1990 },
+  enterprise: { name:'Enterprise', maxProjects:999, maxUsers:999, price:3490 },
+};
+function getPlan(){ return PLANS[me?.plan||'basic'] || PLANS.basic; }
+function planLabel(p){ return p==='enterprise'?'Enterprise':p==='pro'?'Pro':'Basic'; }
+
 // ════════════════════════════════════════════
 //  SUPABASE INIT
 // ════════════════════════════════════════════
@@ -638,6 +650,7 @@ async function enterApp(user){
       emoji:    '👑',
       color:    '#a8720a',
       owner_id: user.id,
+      plan:     user.user_metadata?.plan || 'basic',
     };
   }
 
@@ -686,6 +699,13 @@ function initApp(){
   const dotColor  = me.role==='owner'?'#e8c84a':me.role==='manager'?'#60a5fa':'#6ee7b7';
   document.getElementById('u-dot').style.background = dotColor;
   document.getElementById('u-name').textContent = me.name+' ('+roleLabel+')';
+  // Show plan badge for owners
+  const planBadgeEl = document.getElementById('plan-badge');
+  if(planBadgeEl && me.role==='owner'){
+    const plan = getPlan();
+    planBadgeEl.textContent = plan.name;
+    planBadgeEl.style.display='inline-flex';
+  }
   const sw = document.getElementById('role-switch');
   const sb = document.getElementById('switch-btn');
   if((me.role==='owner'||me.role==='manager') && sw && sb){
@@ -789,6 +809,10 @@ function buildManager(){
   <div class="tab" id="tab-users">
     <div class="fb mb4">
       <div style="font-family:'DM Serif Display',serif;font-size:1.3rem">ניהול משתמשים</div>
+      <div id="plan-info-bar" style="background:var(--gold-lt);border:1px solid var(--gold-bd);border-radius:8px;padding:8px 14px;font-size:.78rem;display:flex;gap:16px;align-items:center">
+        <span id="plan-info-text"></span>
+        <span class="dim xs" id="plan-info-limits"></span>
+      </div>
       <button class="btn bn" onclick="openOv('ov-user')">+ משתמש חדש</button>
     </div>
     <div id="users-list"></div>
@@ -1255,6 +1279,14 @@ async function deleteD(id){
 //  USERS
 // ────────────────────────────────────────────
 function renderUsers(){
+  // Update plan info bar
+  const plan = getPlan();
+  const infoText = document.getElementById('plan-info-text');
+  const infoLimits = document.getElementById('plan-info-limits');
+  if(infoText) infoText.innerHTML = '📦 תוכנית: <strong>'+plan.name+'</strong>';
+  if(infoLimits) infoLimits.textContent =
+    'פרויקטים: '+projects.length+'/'+plan.maxProjects+
+    ' | משתמשים: '+(users.filter(u=>u.role!=='owner').length+1)+'/'+plan.maxUsers;
   const el=document.getElementById('users-list');
   if(!el) return;
   const owners = users.filter(u=>u.role==='owner');
@@ -1324,6 +1356,14 @@ async function saveUser(){
   errEl.textContent='';
   if(!name||!email||!pass){ errEl.textContent='יש למלא את כל השדות'; return; }
   if(pass.length<6){ errEl.textContent='הסיסמה חייבת להיות לפחות 6 תווים'; return; }
+  // Plan limit check (count existing team members)
+  const plan = getPlan();
+  const currentMembers = users.filter(u=>u.role!=='owner').length;
+  const maxMembers = plan.maxUsers - 1; // minus owner
+  if(currentMembers >= maxMembers){
+    errEl.textContent = '⛔ הגעת למגבלת המשתמשים בתוכנית '+plan.name+' ('+plan.maxUsers+' משתמשים כולל מנהל). שדרג תוכנית להוסיף עוד.';
+    return;
+  }
 
   // Create user in Supabase Auth
   const {data,error} = await _sb.auth.signUp({
