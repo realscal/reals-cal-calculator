@@ -1058,6 +1058,8 @@ async function delProject(id){
   if(apts.find(a=>a.projId===id)){ toast('יש דירות בפרויקט — מחק אותן קודם'); return; }
   if(!confirm('למחוק פרויקט?')) return;
   projects=projects.filter(p=>p.id!==id);
+  const ownerId = me.owner_id || me.id;
+  await _sb.from('projects').delete().eq('id',id).eq('user_id',ownerId);
   await saveAll(); renderProjects(); renderDash();
 }
 
@@ -1134,6 +1136,9 @@ async function delApt(id){
   if(deals.find(d=>d.aptId===id)){ toast('קיימות עסקאות לדירה — לא ניתן למחוק'); return; }
   if(!confirm('למחוק דירה?')) return;
   apts=apts.filter(a=>a.id!==id);
+  // Delete directly from Supabase
+  const ownerId = me.owner_id || me.id;
+  await _sb.from('apartments').delete().eq('id',id).eq('user_id',ownerId);
   await saveAll(); renderProjects(); renderDash();
 }
 
