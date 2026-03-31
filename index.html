@@ -307,21 +307,51 @@ hr{border:none;border-top:1px solid var(--border);margin:13px 0}
             onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
             onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
         </div>
-        <div style="margin-bottom:22px">
+        <div style="margin-bottom:12px">
           <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">סיסמה (לפחות 6 תווים)</label>
           <input type="password" id="su-pass" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" dir="ltr"
             style="width:100%;padding:11px 14px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;color:#111;outline:none;transition:.15s"
             onfocus="this.style.borderColor='#065f46';this.style.background='#f0fdf4'"
-            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'"
-            onkeydown="if(event.key==='Enter')doSignup()">
+            onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'">
+        </div>
+        <!-- Plan selection -->
+        <div style="margin-bottom:18px">
+          <label style="font-size:.67rem;font-weight:700;color:#6b7280;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px">בחר מסלול</label>
+          <div style="display:flex;flex-direction:column;gap:7px" id="plan-select-group">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;transition:.15s" onclick="selectPlan('basic',this)">
+              <input type="radio" name="su-plan" value="basic" checked style="accent-color:#065f46">
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:.85rem">Basic — ₪1,500/חודש</div>
+                <div style="font-size:.72rem;color:#6b7280">פרויקט 1 | עד 4 משתמשים</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;transition:.15s" onclick="selectPlan('pro',this)">
+              <input type="radio" name="su-plan" value="pro" style="accent-color:#065f46">
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:.85rem">Pro — ₪1,990/חודש</div>
+                <div style="font-size:.72rem;color:#6b7280">עד 5 פרויקטים | עד 8 משתמשים</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;transition:.15s" onclick="selectPlan('enterprise',this)">
+              <input type="radio" name="su-plan" value="enterprise" style="accent-color:#065f46">
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:.85rem">Enterprise — ₪3,490/חודש</div>
+                <div style="font-size:.72rem;color:#6b7280">פרויקטים ומשתמשים ללא הגבלה</div>
+              </div>
+            </label>
+          </div>
         </div>
         <button onclick="doSignup()"
           style="width:100%;padding:13px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(6,95,70,.2)"
           onmouseover="this.style.background='#064e3b'" onmouseout="this.style.background='#065f46'">
-          יצירת חשבון &larr;
+          שלח בקשת הצטרפות &larr;
         </button>
         <div id="su-err" style="color:#ef4444;font-size:.78rem;margin-top:10px;text-align:center;min-height:18px"></div>
-        <div id="su-ok" style="color:#065f46;font-size:.82rem;margin-top:10px;text-align:center;display:none;line-height:1.6">&#x2705; נשלח אימות לאימייל שלך<br><span style="opacity:.6;font-size:.75rem">בדוק את תיבת הדואר ולחץ על הקישור</span></div>
+        <div id="su-ok" style="display:none;text-align:center;padding:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-top:10px">
+          <div style="font-size:1.4rem;margin-bottom:8px">⏳</div>
+          <div style="font-weight:700;color:#065f46;margin-bottom:4px">הבקשה נשלחה!</div>
+          <div style="font-size:.78rem;color:#6b7280;line-height:1.6">החשבון שלך ממתין לאישור.<br>נחזור אליך בהקדם.</div>
+        </div>
       </div>
 
       <div style="text-align:center;margin-top:28px;font-size:.67rem;color:#d1d5db">RealsCal &copy; 2025</div>
@@ -601,6 +631,13 @@ async function doLogin(){
   await enterApp(data.user);
 }
 
+function selectPlan(plan, el){
+  document.querySelectorAll('#plan-select-group label').forEach(l=>{
+    l.style.borderColor='#e5e7eb'; l.style.background='#fff';
+  });
+  el.style.borderColor='#065f46'; el.style.background='#f0fdf4';
+}
+
 async function doSignup(){
   const name  = document.getElementById('su-name').value.trim();
   const email = document.getElementById('su-email').value.trim();
@@ -610,15 +647,42 @@ async function doSignup(){
   err.textContent=''; ok.style.display='none';
   if(!name||!email||!pass){ err.textContent='יש למלא את כל השדות'; return; }
   if(pass.length<6){ err.textContent='הסיסמה חייבת להיות לפחות 6 תווים'; return; }
+  // Get selected plan
+  const planRadio = document.querySelector('input[name="su-plan"]:checked');
+  const selectedPlan = planRadio ? planRadio.value : 'basic';
   const {data,error} = await _sb.auth.signUp({
     email, password:pass,
-    options:{ data:{ full_name:name } }
+    options:{ data:{ full_name:name, plan:selectedPlan, status:'pending' } }
   });
   if(error){ err.textContent='שגיאה: '+error.message; return; }
   ok.style.display='block';
+  document.getElementById('su-name').value='';
+  document.getElementById('su-email').value='';
+  document.getElementById('su-pass').value='';
 }
 
 async function enterApp(user){
+  // Check if user is pending approval
+  const userStatus = user.user_metadata?.status;
+  if(userStatus === 'pending'){
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('content').innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:center;min-height:60vh">
+        <div style="text-align:center;max-width:400px;padding:48px 32px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+          <div style="font-size:3rem;margin-bottom:16px">⏳</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:10px;color:#111">ממתין לאישור</div>
+          <div style="font-size:.88rem;color:#6b7280;line-height:1.7;margin-bottom:24px">
+            הבקשה שלך התקבלה ונמצאת בבדיקה.<br>
+            נחזור אליך בהקדם עם אישור גישה.<br><br>
+            <strong>מסלול שנבחר:</strong> ${user.user_metadata?.plan ? {'basic':'Basic','pro':'Pro','enterprise':'Enterprise'}[user.user_metadata.plan] : 'Basic'}
+          </div>
+          <button onclick="logout()" style="padding:10px 24px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">יציאה</button>
+        </div>
+      </div>`;
+    return;
+  }
+
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--ink3)"><div style="font-size:2rem;margin-bottom:12px">⏳</div>טוען נתונים...</div>';
