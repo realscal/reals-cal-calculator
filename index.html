@@ -507,6 +507,9 @@ function planLabel(p){ return p==='enterprise'?'Enterprise':p==='pro'?'Pro':'Bas
 //  SUPABASE INIT
 // ════════════════════════════════════════════
 const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDU0ODAsImV4cCI6MjA4OTM4MTQ4MH0.XCdRaM8aX1QHgyoTdHK9enW608ijaoSBTGL6ATQ-T0U');
+const _sbAdmin = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzgwNTQ4MCwiZXhwIjoyMDg5MzgxNDgwfQ.tLNjUKjPgeWMnADZZGLd6Prj5taPFzslQmS53G7rswY',{
+  auth:{ autoRefreshToken:false, persistSession:false }
+});
 
 // per-user localStorage keys
 function SK(uid){
@@ -2119,31 +2122,32 @@ async function loadPendingUsers(){
 }
 
 async function approveClient(id, plan){
-  // Update pending_users status
+  // Update user metadata via admin client
+  const {error} = await _sbAdmin.auth.admin.updateUserById(id, {
+    user_metadata: { status:'approved', plan:plan }
+  });
+  if(error){ toast('שגיאה: '+error.message); return; }
   await _sb.from('pending_users').update({status:'approved'}).eq('id',id);
-  // Show SQL to run in Supabase
-  const sql = `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"status":"approved","plan":"${plan}"}'::jsonb where id = '${id}';`;
-  navigator.clipboard?.writeText(sql).catch(()=>{});
-  toast('✅ לקוח אושר — הרץ SQL ב-Supabase ואשר');
+  toast('✅ לקוח אושר! יכול להיכנס עכשיו');
   loadPendingUsers();
 }
 
 async function rejectClient(id){
   if(!confirm('לדחות לקוח זה?')) return;
+  await _sbAdmin.auth.admin.updateUserById(id, {
+    user_metadata: { status:'rejected' }
+  });
   await _sb.from('pending_users').update({status:'rejected'}).eq('id',id);
-  // Show SQL to block user
-  const sql = `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"status":"rejected"}'::jsonb where id = '${id}';`;
-  navigator.clipboard?.writeText(sql).catch(()=>{});
   toast('לקוח נדחה');
   loadPendingUsers();
 }
 
 async function deleteClient(id){
   if(!confirm('למחוק לקוח לצמיתות?\nהלקוח לא יוכל להיכנס יותר.')) return;
+  // Delete from auth via admin
+  await _sbAdmin.auth.admin.deleteUser(id);
   await _sb.from('pending_users').delete().eq('id',id);
-  const sql = `delete from auth.users where id = '${id}';`;
-  navigator.clipboard?.writeText(sql).catch(()=>{});
-  toast('🗑 לקוח נמחק — הרץ SQL ב-Supabase למחיקה מוחלטת');
+  toast('🗑 לקוח נמחק לצמיתות');
   loadPendingUsers();
 }
 
