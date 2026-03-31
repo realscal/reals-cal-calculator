@@ -2085,10 +2085,15 @@ async function loadPendingUsers(){
     const borderColor = u.status==='pending' ? 'var(--gold-bd)' : 'var(--border)';
     const dateStr = new Date(u.created_at).toLocaleDateString('he-IL');
     const planStr = planNames[u.plan] || u.plan;
+    const statusBadge = u.status==='approved'
+      ? '<span class="bdg bdg-g">✅ מאושר</span>'
+      : '<span class="bdg bdg-r">❌ נדחה</span>';
     const btns = u.status==='pending'
       ? `<button class="btn bgreen bsm" onclick="approveClient('${u.id}','${u.plan}')">✓ אשר</button>
-         <button class="btn bdel" onclick="rejectClient('${u.id}')">✕ דחה</button>`
-      : `<span class="bdg bdg-g">${u.status==='approved'?'✅ מאושר':'❌ נדחה'}</span>`;
+         <button class="btn bdel" onclick="rejectClient('${u.id}')">✕ דחה</button>
+         <button class="btn bdel" onclick="deleteClient('${u.id}')" title="מחק לחלוטין">🗑</button>`
+      : `${statusBadge}
+         <button class="btn bdel" onclick="deleteClient('${u.id}')" title="מחק לחלוטין">🗑 מחק</button>`;
     return `<div style="background:#faf8f4;border:1px solid ${borderColor};border-radius:10px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px">
       <div style="flex:1">
         <div class="bold">${u.name||'—'}</div>
