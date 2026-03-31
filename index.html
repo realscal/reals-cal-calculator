@@ -671,12 +671,10 @@ async function doSignup(){
 }
 
 async function enterApp(user){
-  // Check if user is pending approval
+  // Check if user is pending approval — use metadata only
   const userStatus = user.user_metadata?.status;
-  // Check user_approvals table for override
-  const {data:approvalRow} = await _sb.from('user_approvals').select('*').eq('user_id',user.id).maybeSingle();
-  const isApproved = approvalRow?.approved === true;
-  if(userStatus === 'pending' && !isApproved){
+  const isApproved = userStatus === 'approved';
+  if(userStatus === 'pending'){
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('content').innerHTML=`
@@ -726,7 +724,7 @@ async function enterApp(user){
       emoji:    '👑',
       color:    '#a8720a',
       owner_id: user.id,
-      plan:     approvalRow?.plan || user.user_metadata?.plan || 'basic',
+      plan:     user.user_metadata?.plan || 'basic',
     };
   }
 
@@ -2107,17 +2105,34 @@ async function loadPendingUsers(){
 }
 
 async function approveClient(id, plan){
+  // Update pending_users status
   await _sb.from('pending_users').update({status:'approved'}).eq('id',id);
-  // Update user metadata via our workaround
-  await _sb.from('user_approvals').upsert({user_id:id, plan:plan, approved:true});
-  toast('✅ לקוח אושר!');
+  // Show SQL to run in Supabase
+  const sql = `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"status":"approved","plan":"${plan}"}'::jsonb where id = '${id}';`;
+  const msg = `לאישור סופי, רוץ ב-Supabase SQL Editor:\n\n${sql}\n\n(הועתק ללוח)`;
+  navigator.clipboard?.writeText(sql).catch(()=>{});
+  alert(msg);
+  toast('✅ לקוח אושר — הרץ SQL ב-Supabase');
   loadPendingUsers();
 }
 
 async function rejectClient(id){
   if(!confirm('לדחות לקוח זה?')) return;
   await _sb.from('pending_users').update({status:'rejected'}).eq('id',id);
+  // Show SQL to block user
+  const sql = `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"status":"rejected"}'::jsonb where id = '${id}';`;
+  navigator.clipboard?.writeText(sql).catch(()=>{});
   toast('לקוח נדחה');
+  loadPendingUsers();
+}
+
+async function deleteClient(id){
+  if(!confirm('למחוק לקוח לצמיתות?\nהלקוח לא יוכל להיכנס יותר.')) return;
+  await _sb.from('pending_users').delete().eq('id',id);
+  const sql = `delete from auth.users where id = '${id}';`;
+  navigator.clipboard?.writeText(sql).catch(()=>{});
+  alert('הלקוח נמחק מהרשימה.\n\nכדי למחוק לחלוטין מ-Supabase, רוץ SQL שהועתק ללוח.');
+  toast('🗑 לקוח נמחק');
   loadPendingUsers();
 }
 
