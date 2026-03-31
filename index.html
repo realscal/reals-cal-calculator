@@ -1149,12 +1149,25 @@ function openProjectModal(id){
 async function saveProject(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){ toast('חובה להזין שם פרויקט'); return; }
+
+  // בדיקת מגבלת תוכנית — רק בעת הוספה חדשה
+  if(!editProjId){
+    const plan = getPlan();
+    if(projects.length >= plan.maxProjects){
+      toast('⛔ הגעת למגבלת הפרויקטים בתוכנית '+plan.name+' ('+plan.maxProjects+' פרויקטים). שדרג תוכנית להוסיף עוד.');
+      closeOv('ov-project');
+      return;
+    }
+  }
+
+  const existing = editProjId ? projects.find(x=>x.id===editProjId) : null;
   const proj={
     id: editProjId||uid(),
     name,
     loc: document.getElementById('p-loc').value.trim(),
     target: +document.getElementById('p-target').value||0,
-    payments: []
+    payments: existing?.payments||[],
+    assignedSales: existing?.assignedSales||[]
   };
   if(editProjId) projects=projects.map(x=>x.id===editProjId?proj:x);
   else projects.push(proj);
