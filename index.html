@@ -2123,10 +2123,8 @@ async function approveClient(id, plan){
   await _sb.from('pending_users').update({status:'approved'}).eq('id',id);
   // Show SQL to run in Supabase
   const sql = `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"status":"approved","plan":"${plan}"}'::jsonb where id = '${id}';`;
-  const msg = `לאישור סופי, רוץ ב-Supabase SQL Editor:\n\n${sql}\n\n(הועתק ללוח)`;
   navigator.clipboard?.writeText(sql).catch(()=>{});
-  alert(msg);
-  toast('✅ לקוח אושר — הרץ SQL ב-Supabase');
+  toast('✅ לקוח אושר — הרץ SQL ב-Supabase ואשר');
   loadPendingUsers();
 }
 
@@ -2145,8 +2143,7 @@ async function deleteClient(id){
   await _sb.from('pending_users').delete().eq('id',id);
   const sql = `delete from auth.users where id = '${id}';`;
   navigator.clipboard?.writeText(sql).catch(()=>{});
-  alert('הלקוח נמחק מהרשימה.\n\nכדי למחוק לחלוטין מ-Supabase, רוץ SQL שהועתק ללוח.');
-  toast('🗑 לקוח נמחק');
+  toast('🗑 לקוח נמחק — הרץ SQL ב-Supabase למחיקה מוחלטת');
   loadPendingUsers();
 }
 
