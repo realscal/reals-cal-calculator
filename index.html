@@ -2073,10 +2073,6 @@ async function loadPendingUsers(){
   if(!el) return;
   el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink3)">טוען...</div>';
 
-  const {data, error} = await _sb.auth.admin?.listUsers?.() || {};
-  // Can't use admin API from browser — use our workaround via user_config
-  // Instead, query all users who signed up via signup form (have plan in metadata)
-  // We'll use a pending_users table approach
   const {data:pendingRows} = await _sb.from('pending_users').select('*').order('created_at', {ascending:false});
 
   if(!pendingRows || !pendingRows.length){
