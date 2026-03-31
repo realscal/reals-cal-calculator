@@ -655,6 +655,15 @@ async function doSignup(){
     options:{ data:{ full_name:name, plan:selectedPlan, status:'pending' } }
   });
   if(error){ err.textContent='שגיאה: '+error.message; return; }
+  // Insert into pending_users for admin review
+  if(data.user){
+    await _sb.from('pending_users').insert({
+      id: data.user.id,
+      name, email, plan: selectedPlan,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+  }
   ok.style.display='block';
   document.getElementById('su-name').value='';
   document.getElementById('su-email').value='';
@@ -664,7 +673,10 @@ async function doSignup(){
 async function enterApp(user){
   // Check if user is pending approval
   const userStatus = user.user_metadata?.status;
-  if(userStatus === 'pending'){
+  // Check user_approvals table for override
+  const {data:approvalRow} = await _sb.from('user_approvals').select('*').eq('user_id',user.id).maybeSingle();
+  const isApproved = approvalRow?.approved === true;
+  if(userStatus === 'pending' && !isApproved){
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('content').innerHTML=`
@@ -714,7 +726,7 @@ async function enterApp(user){
       emoji:    '👑',
       color:    '#a8720a',
       owner_id: user.id,
-      plan:     user.user_metadata?.plan || 'basic',
+      plan:     approvalRow?.plan || user.user_metadata?.plan || 'basic',
     };
   }
 
@@ -809,12 +821,14 @@ function switchRole(){
 // ███  MANAGER APP
 // ════════════════════════════════════════════
 function buildManager(){
+  const clientsBtn = me.email==='amitzamir32@gmail.com' ? '<button onclick="showTab(\'clients\',this)" style="color:#e8c84a">👑 לקוחות</button>' : '';
   document.getElementById('nav').innerHTML=`
     <button class="on" onclick="showTab('dash',this)">דשבורד</button>
     <button onclick="showTab('projects',this)">פרויקטים</button>
     <button onclick="showTab('deals',this)">עסקאות<span id="pnd-badge" class="nb" style="display:none">0</span></button>
     <button onclick="showTab('users',this)">משתמשים</button>
-    <button onclick="showTab('calc',this)">מחשבון</button>`;
+    <button onclick="showTab('calc',this)">מחשבון</button>
+    `+clientsBtn;
 
   document.getElementById('content').innerHTML=`
   <!-- DASHBOARD -->
@@ -880,6 +894,15 @@ function buildManager(){
       <button class="btn bn" onclick="openOv('ov-user')">+ משתמש חדש</button>
     </div>
     <div id="users-list"></div>
+  </div>
+
+  <!-- CLIENTS TAB (super admin only) -->
+  <div class="tab" id="tab-clients">
+    <div class="fb mb4">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.3rem">👑 ניהול לקוחות</div>
+      <button class="btn bn" onclick="loadPendingUsers()">🔄 רענן</button>
+    </div>
+    <div id="clients-list"><div class="dim" style="padding:40px;text-align:center">לחץ רענן לטעון לקוחות</div></div>
   </div>
 
   <!-- CALCULATOR TAB -->
@@ -1810,6 +1833,7 @@ function showTab(name,btn){
   if(name==='deals') renderDeals();
   if(name==='users') renderUsers();
   if(name==='calc') renderDCF();
+  if(name==='clients') loadPendingUsers();
 }
 
 // ════════════════════════════════════════════
@@ -2041,6 +2065,60 @@ function checkOffer(){
         <div style="font-size:.88rem;color:rgba(255,255,255,.7)">המחיר המינימלי לפריסה זו הוא <strong style="color:#fff">${fmt(flrG)}</strong></div>
         <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:6px">לאישור חריג — פנה למנהל</div>
       </div>`;
+}
+
+// ════════════════════════════════════════════
+//  SUPER ADMIN — CLIENT MANAGEMENT
+// ════════════════════════════════════════════
+async function loadPendingUsers(){
+  const el = document.getElementById('clients-list');
+  if(!el) return;
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink3)">טוען...</div>';
+
+  const {data, error} = await _sb.auth.admin?.listUsers?.() || {};
+  // Can't use admin API from browser — use our workaround via user_config
+  // Instead, query all users who signed up via signup form (have plan in metadata)
+  // We'll use a pending_users table approach
+  const {data:pendingRows} = await _sb.from('pending_users').select('*').order('created_at', {ascending:false});
+
+  if(!pendingRows || !pendingRows.length){
+    el.innerHTML='<div class="dim" style="padding:40px;text-align:center">אין לקוחות ממתינים</div>';
+    return;
+  }
+
+  const planNames = {basic:'Basic ₪1,500/חודש', pro:'Pro ₪1,990/חודש', enterprise:'Enterprise ₪3,490/חודש'};
+  el.innerHTML = pendingRows.map(u => {
+    const borderColor = u.status==='pending' ? 'var(--gold-bd)' : 'var(--border)';
+    const dateStr = new Date(u.created_at).toLocaleDateString('he-IL');
+    const planStr = planNames[u.plan] || u.plan;
+    const btns = u.status==='pending'
+      ? `<button class="btn bgreen bsm" onclick="approveClient('${u.id}','${u.plan}')">✓ אשר</button>
+         <button class="btn bdel" onclick="rejectClient('${u.id}')">✕ דחה</button>`
+      : `<span class="bdg bdg-g">${u.status==='approved'?'✅ מאושר':'❌ נדחה'}</span>`;
+    return `<div style="background:#faf8f4;border:1px solid ${borderColor};border-radius:10px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px">
+      <div style="flex:1">
+        <div class="bold">${u.name||'—'}</div>
+        <div class="dim xs">${u.email} • ${planStr}</div>
+        <div class="dim xs">${dateStr}</div>
+      </div>
+      <div class="fc" style="gap:8px">${btns}</div>
+    </div>`;
+  }).join('');
+}
+
+async function approveClient(id, plan){
+  await _sb.from('pending_users').update({status:'approved'}).eq('id',id);
+  // Update user metadata via our workaround
+  await _sb.from('user_approvals').upsert({user_id:id, plan:plan, approved:true});
+  toast('✅ לקוח אושר!');
+  loadPendingUsers();
+}
+
+async function rejectClient(id){
+  if(!confirm('לדחות לקוח זה?')) return;
+  await _sb.from('pending_users').update({status:'rejected'}).eq('id',id);
+  toast('לקוח נדחה');
+  loadPendingUsers();
 }
 
 // ════════════════════════════════════════════
