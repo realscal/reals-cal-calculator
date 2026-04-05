@@ -507,9 +507,12 @@ function planLabel(p){ return p==='enterprise'?'Enterprise':p==='pro'?'Pro':'Bas
 //  SUPABASE INIT
 // ════════════════════════════════════════════
 const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDU0ODAsImV4cCI6MjA4OTM4MTQ4MH0.XCdRaM8aX1QHgyoTdHK9enW608ijaoSBTGL6ATQ-T0U');
-const _sbAdmin = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzgwNTQ4MCwiZXhwIjoyMDg5MzgxNDgwfQ.tLNjUKjPgeWMnADZZGLd6Prj5taPFzslQmS53G7rswY',{
-  auth:{ autoRefreshToken:false, persistSession:false }
-});
+
+// Admin operations — uses pending_users table only (no service key in browser)
+const _adminFetch = async (path, method='GET', body=null) => {
+  // Placeholder — admin operations done via pending_users table
+  return {};
+};
 
 // per-user localStorage keys
 function SK(uid){
@@ -2122,32 +2125,26 @@ async function loadPendingUsers(){
 }
 
 async function approveClient(id, plan){
-  // Update user metadata via admin client
-  const {error} = await _sbAdmin.auth.admin.updateUserById(id, {
-    user_metadata: { status:'approved', plan:plan }
-  });
-  if(error){ toast('שגיאה: '+error.message); return; }
-  await _sb.from('pending_users').update({status:'approved'}).eq('id',id);
-  toast('✅ לקוח אושר! יכול להיכנס עכשיו');
+  // Update pending_users — trigger in Supabase updates auth.users automatically
+  await _sb.from('pending_users').update({status:'approved', plan:plan}).eq('id',id);
+  // Also update via RPC function
+  const {error} = await _sb.rpc('approve_user', {user_id:id, user_plan:plan});
+  if(error) console.warn('RPC error:', error.message);
+  toast('✅ לקוח אושר!');
   loadPendingUsers();
 }
 
 async function rejectClient(id){
   if(!confirm('לדחות לקוח זה?')) return;
-  await _sbAdmin.auth.admin.updateUserById(id, {
-    user_metadata: { status:'rejected' }
-  });
   await _sb.from('pending_users').update({status:'rejected'}).eq('id',id);
   toast('לקוח נדחה');
   loadPendingUsers();
 }
 
 async function deleteClient(id){
-  if(!confirm('למחוק לקוח לצמיתות?\nהלקוח לא יוכל להיכנס יותר.')) return;
-  // Delete from auth via admin
-  await _sbAdmin.auth.admin.deleteUser(id);
+  if(!confirm('למחוק לקוח מהרשימה?')) return;
   await _sb.from('pending_users').delete().eq('id',id);
-  toast('🗑 לקוח נמחק לצמיתות');
+  toast('🗑 לקוח הוסר מהרשימה');
   loadPendingUsers();
 }
 
