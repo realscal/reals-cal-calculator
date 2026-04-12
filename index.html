@@ -1487,7 +1487,7 @@ async function saveUser(){
   };
   await _sb.from('team_members').upsert({
     id: data.user.id,
-    owner_id: me.id,
+    owner_id: me.owner_id || me.id,
     member_id: data.user.id,
     role, name, email
   });
