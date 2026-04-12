@@ -2105,14 +2105,26 @@ async function loadPendingUsers(){
     const dateStr = new Date(u.created_at).toLocaleDateString('he-IL');
     const planStr = planNames[u.plan] || u.plan;
     const statusBadge = u.status==='approved'
-      ? '<span class="bdg bdg-g">✅ מאושר</span>'
-      : '<span class="bdg bdg-r">❌ נדחה</span>';
+      ? '<span class="bdg bdg-g">✅ פעיל</span>'
+      : u.status==='suspended'
+        ? '<span class="bdg bdg-or">⏸ מושהה</span>'
+        : u.status==='pending'
+          ? '<span class="bdg bdg-b">⏳ ממתין</span>'
+          : '<span class="bdg bdg-r">❌ נדחה</span>';
     const btns = u.status==='pending'
       ? `<button class="btn bgreen bsm" onclick="approveClient('${u.id}','${u.plan}')">✓ אשר</button>
          <button class="btn bdel" onclick="rejectClient('${u.id}')">✕ דחה</button>
          <button class="btn bdel" onclick="deleteClient('${u.id}')" title="מחק לחלוטין">🗑</button>`
-      : `${statusBadge}
-         <button class="btn bdel" onclick="deleteClient('${u.id}')" title="מחק לחלוטין">🗑 מחק</button>`;
+      : u.status==='approved'
+        ? `${statusBadge}
+           <button class="btn bsm" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="suspendClient('${u.id}')">⏸ השהה</button>
+           <button class="btn bdel" onclick="deleteClient('${u.id}')">🗑</button>`
+        : u.status==='suspended'
+          ? `${statusBadge}
+             <button class="btn bgreen bsm" onclick="approveClient('${u.id}','${u.plan}')">▶ שחרר</button>
+             <button class="btn bdel" onclick="deleteClient('${u.id}')">🗑</button>`
+          : `${statusBadge}
+             <button class="btn bdel" onclick="deleteClient('${u.id}')">🗑 מחק</button>`;
     return `<div style="background:#faf8f4;border:1px solid ${borderColor};border-radius:10px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px">
       <div style="flex:1">
         <div class="bold">${u.name||'—'}</div>
@@ -2138,6 +2150,17 @@ async function rejectClient(id){
   if(!confirm('לדחות לקוח זה?')) return;
   await _sb.from('pending_users').update({status:'rejected'}).eq('id',id);
   toast('לקוח נדחה');
+  loadPendingUsers();
+}
+
+async function suspendClient(id){
+  if(!confirm('להשהות לקוח זה?\nהוא לא יוכל להיכנס עד שתשחרר אותו.\nכל הנתונים שלו יישמרו.')) return;
+  const {error} = await _sb.rpc('approve_user', {user_id:id, user_plan:'suspended'});
+  // Use a different approach — update pending_users status
+  await _sb.from('pending_users').update({status:'suspended'}).eq('id',id);
+  // Update via RPC with suspended status
+  await _sb.rpc('suspend_user', {user_id:id});
+  toast('⏸ לקוח הושהה — הנתונים שמורים');
   loadPendingUsers();
 }
 
