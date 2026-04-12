@@ -1483,14 +1483,14 @@ async function saveUser(){
     name, email, role,
     emoji: role==='manager'?'👔':'⭐',
     color: cols[users.length%cols.length],
-    owner_id: me.id
+    owner_id: me.owner_id || me.id
   };
-  await _sb.from('team_members').upsert({
-    id: data.user.id,
+  const {error:tmError} = await _sb.from('team_members').insert({
     owner_id: me.owner_id || me.id,
     member_id: data.user.id,
     role, name, email
   });
+  if(tmError) console.warn('team_members insert error:', tmError.message);
 
   users.push(newMember);
   closeOv('ov-user');
