@@ -2281,48 +2281,41 @@ function renderReports(){
       const avgDisc = pDeals.length ? pDeals.reduce((s,d)=>s+(d.discPct||0),0)/pDeals.length : 0;
       const avgNpv  = pDeals.length ? pDeals.reduce((s,d)=>s+(d.excess||0),0)/pDeals.length : 0;
 
-      html += `<div class="card mb3">
-        <div class="card-hd">
-          <h3>${p.name} ${p.loc?'<span class="bdg bdg-gr">'+p.loc+'</span>':''}</h3>
-          <div class="fc">
-            <span class="bdg bdg-g">✅ ${sold} נמכרו</span>
-            <span class="bdg bdg-b">🟡 ${reserved} מוקפאות</span>
-            <span class="bdg bdg-gr">🟢 ${avail} פנויות</span>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div style="background:var(--primary-lt);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">סה"כ הכנסות</div>
-            <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--primary)">${fmt(totalRev)}</div>
-          </div>
-          <div style="background:#f8faff;border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">עסקאות חתומות</div>
-            <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--blue)">${pDeals.length}</div>
-          </div>
-          <div style="background:#fffbeb;border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">ממוצע הנחה</div>
-            <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--gold)">${avgDisc.toFixed(1)}%</div>
-          </div>
-          <div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">NPV עודף ממוצע</div>
-            <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--green)">${fmt(avgNpv)}</div>
-          </div>
-        </div>
-        ${pDeals.length ? `<div class="tbl-wrap"><table>
-          <thead><tr><th>דירה</th><th>איש מכירות</th><th>מחיר סגירה</th><th>הנחה</th><th>NPV עודף</th><th>תאריך</th></tr></thead>
-          <tbody>${pDeals.map(d=>{
-            const seller=users.find(u=>u.id===d.userId);
-            return `<tr>
-              <td class="bold">דירה \${d.aptNum} <span class="dim xs">\${d.aptType}</span></td>
-              <td>\${seller?seller.emoji+' '+seller.name:'—'}</td>
-              <td class="bold">\${fmt(d.gross)}</td>
-              <td class="\${(d.discPct||0)>5?'cred bold':''}">\${d.discAmt?fmt(d.discAmt)+' ('+d.discPct+'%)':'—'}</td>
-              <td class="\${(d.excess||0)>=0?'cgreen':'cred'} bold">\${(d.excess||0)>=0?'+':''}\${fmt(d.excess)}</td>
-              <td class="dim xs">\${d.date}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table></div>` : '<div class="empty dim">אין עסקאות חתומות עדיין</div>'}
-      </div>`;
+      const dealsTable = pDeals.length ? (function(){
+        const rows = pDeals.map(d=>{
+          const seller=users.find(u=>u.id===d.userId);
+          const discClass = (d.discPct||0)>5 ? 'cred bold' : '';
+          const excessClass = (d.excess||0)>=0 ? 'cgreen bold' : 'cred bold';
+          return '<tr>'
+            +'<td class="bold">דירה '+d.aptNum+' <span class="dim xs">'+(d.aptType||'')+'</span></td>'
+            +'<td>'+(seller?seller.emoji+' '+seller.name:'—')+'</td>'
+            +'<td class="bold">'+fmt(d.gross)+'</td>'
+            +'<td class="'+discClass+'">'+(d.discAmt?fmt(d.discAmt)+' ('+d.discPct+'%)':'—')+'</td>'
+            +'<td class="'+excessClass+'">'+(((d.excess||0)>=0)?'+':'')+fmt(d.excess||0)+'</td>'
+            +'<td class="dim xs">'+(d.date||'')+'</td>'
+            +'</tr>';
+        }).join('');
+        return '<div class="tbl-wrap"><table>'
+          +'<thead><tr><th>דירה</th><th>איש מכירות</th><th>מחיר סגירה</th><th>הנחה</th><th>NPV עודף</th><th>תאריך</th></tr></thead>'
+          +'<tbody>'+rows+'</tbody></table></div>';
+      })() : '<div class="empty dim">אין עסקאות חתומות עדיין</div>';
+
+      html += '<div class="card mb3">'
+        +'<div class="card-hd">'
+        +'<h3>'+p.name+(p.loc?' <span class="bdg bdg-gr">'+p.loc+'</span>':'')+'</h3>'
+        +'<div class="fc">'
+        +'<span class="bdg bdg-g">✅ '+sold+' נמכרו</span>'
+        +'<span class="bdg bdg-b">🟡 '+reserved+' מוקפאות</span>'
+        +'<span class="bdg bdg-gr">🟢 '+avail+' פנויות</span>'
+        +'</div></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'
+        +'<div style="background:var(--primary-lt);border-radius:10px;padding:14px;text-align:center"><div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">סה"כ הכנסות</div><div style="font-family:\'DM Serif Display\',serif;font-size:1.4rem;color:var(--primary)">'+fmt(totalRev)+'</div></div>'
+        +'<div style="background:#f8faff;border-radius:10px;padding:14px;text-align:center"><div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">עסקאות חתומות</div><div style="font-family:\'DM Serif Display\',serif;font-size:1.4rem;color:var(--blue)">'+pDeals.length+'</div></div>'
+        +'<div style="background:#fffbeb;border-radius:10px;padding:14px;text-align:center"><div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">ממוצע הנחה</div><div style="font-family:\'DM Serif Display\',serif;font-size:1.4rem;color:var(--gold)">'+avgDisc.toFixed(1)+'%</div></div>'
+        +'<div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center"><div style="font-size:.67rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">NPV עודף ממוצע</div><div style="font-family:\'DM Serif Display\',serif;font-size:1.4rem;color:var(--green)">'+fmt(avgNpv)+'</div></div>'
+        +'</div>'
+        +dealsTable
+        +'</div>';
     });
     el.innerHTML = html || '<div class="empty dim" style="padding:60px;text-align:center">אין נתונים להצגה</div>';
   }
@@ -2392,28 +2385,33 @@ function renderReports(){
     filtProjs.forEach(p => {
       const pApts = apts.filter(a=>a.projId===p.id);
       if(!pApts.length) return;
-      html += `<div class="card mb3">
-        <div class="card-hd"><h3>${p.name}</h3></div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>דוח אפס</th><th>יעד נטו</th><th>רצפה ברוטו</th><th>מחירון</th><th>סטטוס</th></tr></thead>
-          <tbody>${pApts.map(a=>{
-            const bf = bankFloor(a);
-            const tn = targetNet(a);
-            const fl = floorGross(a, p.payments);
-            return `<tr>
-              <td class="bold">\${a.num}</td>
-              <td>\${a.floor}</td>
-              <td>\${a.type||'—'}</td>
-              <td>\${a.area} מ"ר</td>
-              <td>\${fmt(bf)}</td>
-              <td>\${fmt(tn)}</td>
-              <td class="bold">\${fmt(fl)}</td>
-              <td>\${a.mkt?fmt(a.mkt):'—'}</td>
-              <td><span class="bdg \${a.sold?'bdg-or':a.reserved?'bdg-b':'bdg-g'}">\${a.sold?'✅ נמכרה':a.reserved?'🟡 מוקפאת':'🟢 פנויה'}</span></td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table></div>
-      </div>`;
+      const rows = pApts.map(a=>{
+        const bf = bankFloor(a);
+        const tn = targetNet(a);
+        const fl = floorGross(a, p.payments);
+        const statusBadge = a.sold
+          ? '<span class="bdg bdg-or">✅ נמכרה</span>'
+          : a.reserved
+            ? '<span class="bdg bdg-b">🟡 מוקפאת</span>'
+            : '<span class="bdg bdg-g">🟢 פנויה</span>';
+        return '<tr>'
+          +'<td class="bold">'+a.num+'</td>'
+          +'<td>'+a.floor+'</td>'
+          +'<td>'+(a.type||'—')+'</td>'
+          +'<td>'+a.area+' מ"ר</td>'
+          +'<td>'+fmt(bf)+'</td>'
+          +'<td>'+fmt(tn)+'</td>'
+          +'<td class="bold">'+fmt(fl)+'</td>'
+          +'<td>'+(a.mkt?fmt(a.mkt):'—')+'</td>'
+          +'<td>'+statusBadge+'</td>'
+          +'</tr>';
+      }).join('');
+      html += '<div class="card mb3">'
+        +'<div class="card-hd"><h3>'+p.name+'</h3></div>'
+        +'<div class="tbl-wrap"><table>'
+        +'<thead><tr><th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>דוח אפס</th><th>יעד נטו</th><th>רצפה ברוטו</th><th>מחירון</th><th>סטטוס</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody>'
+        +'</table></div></div>';
     });
     el.innerHTML = html || '<div class="empty dim" style="padding:60px;text-align:center">אין דירות</div>';
   }
