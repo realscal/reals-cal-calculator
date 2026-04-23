@@ -1086,10 +1086,12 @@ async function doSignup(){
 }
 
 async function enterApp(user){
-  // Check if user is pending approval — use metadata only
+  const SUPER_ADMIN = 'amitzamir32@gmail.com';
+  const isSuperAdmin = user.email === SUPER_ADMIN;
+
+  // Check if user is pending approval — skip for super admin
   const userStatus = user.user_metadata?.status;
-  const isApproved = userStatus === 'approved';
-  if(userStatus === 'pending'){
+  if(userStatus === 'pending' && !isSuperAdmin){
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('content').innerHTML=`
@@ -1116,7 +1118,7 @@ async function enterApp(user){
   const {data:memberRow, error:memberErr} = await _sb.from('team_members')
     .select('*').eq('member_id', user.id).maybeSingle();
 
-  if(memberRow){
+  if(memberRow && !isSuperAdmin){
     // This is a team member — load owner's data
     const ownerMeta = user.user_metadata || {};
     me = {
@@ -1130,16 +1132,16 @@ async function enterApp(user){
       owner_id: memberRow.owner_id
     };
   } else {
-    // This is an owner
+    // Owner — or super admin override
     me = {
       id:       user.id,
-      name:     user.user_metadata?.full_name || user.email.split('@')[0],
+      name:     isSuperAdmin ? 'אמית זמיר' : (user.user_metadata?.full_name || user.email.split('@')[0]),
       email:    user.email,
       role:     'owner',
-      emoji:    '👑',
+      emoji:    isSuperAdmin ? '👑' : '👑',
       color:    '#a8720a',
       owner_id: user.id,
-      plan:     user.user_metadata?.plan || 'basic',
+      plan:     isSuperAdmin ? 'enterprise' : (user.user_metadata?.plan || 'basic'),
     };
   }
 
@@ -1191,9 +1193,10 @@ function initApp(){
   // Show plan badge for owners
   const planBadgeEl = document.getElementById('plan-badge');
   if(planBadgeEl && me.role==='owner'){
-    const plan = getPlan();
-    planBadgeEl.textContent = plan.name;
+    const isSA = me.email==='amitzamir32@gmail.com';
+    planBadgeEl.textContent = isSA ? '👑 Super Admin' : getPlan().name;
     planBadgeEl.style.display='inline-flex';
+    if(isSA) planBadgeEl.style.cssText += ';background:rgba(232,200,74,.2);color:#e8c84a;border-color:rgba(232,200,74,.4);';
   }
   const sw = document.getElementById('role-switch');
   const sb = document.getElementById('switch-btn');
