@@ -901,7 +901,13 @@ function planLabel(p){ return p==='enterprise'?'Enterprise':p==='pro'?'Pro':'Bas
 // ════════════════════════════════════════════
 //  SUPABASE INIT
 // ════════════════════════════════════════════
-const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDU0ODAsImV4cCI6MjA4OTM4MTQ4MH0.XCdRaM8aX1QHgyoTdHK9enW608ijaoSBTGL6ATQ-T0U');
+const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemtrdWJjcG1udmFkb2ZieHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDU0ODAsImV4cCI6MjA4OTM4MTQ4MH0.XCdRaM8aX1QHgyoTdHK9enW608ijaoSBTGL6ATQ-T0U', {
+  auth: {
+    storage: window.sessionStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Admin operations — uses pending_users table only (no service key in browser)
 const _adminFetch = async (path, method='GET', body=null) => {
