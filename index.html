@@ -1742,6 +1742,7 @@ function aptPreview(){
     &nbsp;→&nbsp; <span style="color:var(--red);font-weight:800">רצפת מכירה: ${fmt(flr)}</span>
     ${mkt?` &nbsp;|&nbsp; <span style="color:var(--green);font-weight:800">מרווח מחירון: ${fmt(buf)} (${(buf/mkt*100).toFixed(1)}%)</span>`:''}
     <br><span class="dim xs">הגדרות פרויקט — ריבית: ${pc.rate}% | רווח יעד: ${pc.premium}% | מע"מ: ${pc.vat}%</span>`;
+}
 async function saveApt(){
   const num  = document.getElementById('a-num').value.trim();
   const area = +document.getElementById('a-area').value;
