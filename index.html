@@ -929,6 +929,9 @@ const _sb = supabase.createClient('https://mizkkubcpmnvadofbxpg.supabase.co','ey
     storage: window.sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
+  },
+  realtime: {
+    params: { eventsPerSecond: 10 }
   }
 });
 
@@ -1202,6 +1205,7 @@ async function enterApp(user){
 
   await loadUserData();
   initApp();
+  startRealtime();
 }
 
 async function logout(){
@@ -2966,6 +2970,86 @@ window.addEventListener('storage',e=>{
 //  BOOT
 // ════════════════════════════════════════════
 // boot handled by _sb.auth.getSession above
+
+// ════════════════════════════════════════════
+//  REAL-TIME SYNC
+// ════════════════════════════════════════════
+let _realtimeChannel = null;
+
+function startRealtime(){
+  if(!me) return;
+  const ownerId = me.owner_id || me.id;
+
+  // Unsubscribe from previous channel if exists
+  if(_realtimeChannel){
+    _sb.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+
+  _realtimeChannel = _sb
+    .channel('realtime-sync-'+ownerId)
+
+    // Projects changes
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'projects',
+      filter: 'user_id=eq.'+ownerId
+    }, async () => {
+      const {data} = await _sb.from('projects').select('*').eq('user_id', ownerId);
+      projects = (data||[]).map(r=>({
+        id:r.id, name:r.name, loc:r.loc, target:r.target,
+        payments:r.payments||[], assignedSales:r.assigned_sales||[],
+        settings:r.settings||{}
+      }));
+      renderProjects(); renderDash();
+      if(me.role==='sales') renderSVProjects();
+      toast('🔄 פרויקטים עודכנו');
+    })
+
+    // Apartments changes
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'apartments',
+      filter: 'user_id=eq.'+ownerId
+    }, async () => {
+      const {data} = await _sb.from('apartments').select('*').eq('user_id', ownerId);
+      apts = (data||[]).map(r=>({
+        id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
+        type:r.type, area:r.area, park:r.park, sqm:r.sqm,
+        balcony:r.balcony||0, garden:r.garden||0,
+        ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
+      }));
+      renderProjects(); renderDash();
+      if(me.role==='sales'){ renderSVProjects(); if(svProj) renderSVApts(); }
+      toast('🔄 דירות עודכנו');
+    })
+
+    // Deals changes
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'deals',
+      filter: 'user_id=eq.'+ownerId
+    }, async () => {
+      const {data} = await _sb.from('deals').select('data').eq('user_id', ownerId);
+      deals = (data||[]).map(r=>r.data);
+      renderDeals(); renderDash();
+      toast('🔄 עסקאות עודכנו');
+    })
+
+    .subscribe((status) => {
+      if(status === 'SUBSCRIBED'){
+        console.log('✅ Real-time sync active');
+      }
+    });
+}
+
+// Stop realtime on logout
+const _origLogout = logout;
+async function logout(){
+  if(_realtimeChannel){
+    _sb.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+  await _origLogout();
+}
+
 </script>
 </body>
 </html>
