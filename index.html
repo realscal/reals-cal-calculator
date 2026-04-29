@@ -2075,7 +2075,7 @@ function renderCalcProjects(){
   const grid = document.getElementById('calc-proj-grid');
   if(!grid) return;
   const rl = document.getElementById('calc-rate-lbl');
-  if(rl) rl.textContent = _pc.rate || cfg.rate + '%';
+  if(rl) rl.textContent = (calcProj ? projCfg(calcProj).rate : cfg.rate) + '%';
   if(!projects.length){
     grid.innerHTML = '<div class="ib ib-or s">אין פרויקטים — צור פרויקט בלשונית הפרויקטים</div>';
     return;
@@ -2250,6 +2250,7 @@ function calcCheckOffer(){
   const offer = +document.getElementById('calc-offer').value;
   const el    = document.getElementById('calc-offer-res');
   if(!offer || !calcApt){ if(el) el.innerHTML=''; return; }
+  const _pc = projCfg(calcProj);
   const f=npvF(calcPmts,_pc.rate);
   const flrG = targetNet(calcApt)/f*(1+_pc.vat/100);
   const ok   = offer >= flrG;
@@ -2289,6 +2290,7 @@ function calcCheckOffer(){
 
 async function submitDealMgr(offerPrice){
   if(!calcApt || !calcProj || !me) return;
+  const _pc     = projCfg(calcProj);
   const f       = npvF(calcPmts, _pc.rate);
   const flrG    = targetNet(calcApt)/f*(1+_pc.vat/100);
   const isBelowFloor = offerPrice < flrG;
