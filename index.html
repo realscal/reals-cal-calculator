@@ -1440,7 +1440,7 @@ function buildManager(){
             <h3>2 — דירה</h3>
             <span id="calc-proj-badge" class="bdg bdg-b"></span>
           </div>
-          <div id="calc-apt-grid" class="apt-cards"></div>
+          <div id="calc-apt-grid"></div>
         </div>
 
         <!-- STEP 3: SPREAD -->
@@ -2173,21 +2173,36 @@ function selectCalcProj(id){
 
 function renderCalcApts(){
   const grid = document.getElementById('calc-apt-grid');
-  const noA  = document.getElementById('calc-no-apt');
   if(!grid || !calcProj) return;
-  const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold && !a.reserved);
+  const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold && !a.reserved)
+    .sort((a,b)=> +a.floor - +b.floor || +a.num - +b.num || String(a.num).localeCompare(String(b.num)));
   if(!avail.length){
     grid.innerHTML = '<div class="ib ib-or s">אין דירות פנויות בפרויקט</div>';
     return;
   }
-  grid.innerHTML = avail.map(a => {
-    const sel = calcApt?.id === a.id;
-    return `<div class="apt-card${sel?' sel':''}" onclick="selectCalcApt('${a.id}')">
-      <div class="anum">דירה ${a.num}</div>
-      <div class="adet">קומה ${a.floor} | ${a.type||'—'}<br>${a.area} מ"ר${a.balcony?' | מרפסת '+a.balcony+'מ"ר':''}${a.garden?' | גינה '+a.garden+'מ"ר':''}${a.park?' | '+a.park+' חניות':''}</div>
-      ${a.mkt ? '<div class="aprice">'+fmt(a.mkt)+'</div>' : ''}
-    </div>`;
-  }).join('');
+  const pc = projCfg(calcProj);
+  grid.innerHTML = `<div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th><th>דוח אפס</th>
+      </tr></thead>
+      <tbody>${avail.map(a=>{
+        const sel = calcApt?.id === a.id;
+        const bf  = bankFloor(a);
+        return `<tr onclick="selectCalcApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
+          <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
+          <td>${a.floor}</td>
+          <td>${a.type||'—'}</td>
+          <td>${a.area} מ"ר</td>
+          <td class="dim xs">${a.balcony?a.balcony+' מ"ר':'—'}</td>
+          <td class="dim xs">${a.garden?a.garden+' מ"ר':'—'}</td>
+          <td class="dim xs">${a.park||'—'}</td>
+          <td class="bold" style="color:var(--gold)">${a.mkt?fmt(a.mkt):'—'}</td>
+          <td class="dim xs">${fmt(bf)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div>`;
 }
 
 function selectCalcApt(id){
@@ -2464,7 +2479,7 @@ function buildSales(){
         <div class="step-lbl">שלב 2 — בחירת דירה</div>
         <span id="sv-proj-name" class="bdg bdg-b"></span>
       </div>
-      <div id="sv-apt-grid" class="apt-cards"></div>
+      <div id="sv-apt-grid"></div>
       <div id="sv-no-apt" class="ib ib-or mt2" style="display:none">אין דירות פנויות בפרויקט</div>
     </div>
 
@@ -2561,17 +2576,30 @@ function renderSVApts(){
   const grid=document.getElementById('sv-apt-grid');
   const noA=document.getElementById('sv-no-apt');
   if(!grid||!svProj) return;
-  const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold&&!a.reserved);
+  const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold&&!a.reserved)
+    .sort((a,b)=> +a.floor - +b.floor || +a.num - +b.num || String(a.num).localeCompare(String(b.num)));
   if(!avail.length){grid.innerHTML='';if(noA)noA.style.display='block';return;}
   if(noA)noA.style.display='none';
-  grid.innerHTML=avail.map(a=>{
-    const sel=svApt?.id===a.id;
-    return`<div class="apt-card${sel?' sel':''}" onclick="selectApt('${a.id}')">
-      <div class="anum">דירה ${a.num}</div>
-      <div class="adet">קומה ${a.floor} | ${a.type||'—'}<br>${a.area} מ&quot;ר${a.balcony?' | מרפסת '+a.balcony+'מ"ר':''}${a.garden?' | גינה '+a.garden+'מ"ר':''} | ${a.park} חניות</div>
-      ${a.mkt?`<div class="aprice">${fmt(a.mkt)}</div>`:''}
-    </div>`;
-  }).join('');
+  grid.innerHTML = `<div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th>
+      </tr></thead>
+      <tbody>${avail.map(a=>{
+        const sel = svApt?.id === a.id;
+        return `<tr onclick="selectApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
+          <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
+          <td>${a.floor}</td>
+          <td>${a.type||'—'}</td>
+          <td>${a.area} מ"ר</td>
+          <td class="dim xs">${a.balcony?a.balcony+' מ"ר':'—'}</td>
+          <td class="dim xs">${a.garden?a.garden+' מ"ר':'—'}</td>
+          <td class="dim xs">${a.park||'—'}</td>
+          <td class="bold" style="color:var(--gold)">${a.mkt?fmt(a.mkt):'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div>`;
 }
 
 function selectApt(id){
