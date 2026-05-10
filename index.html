@@ -124,7 +124,8 @@ header {
   box-shadow: 0 2px 8px rgba(6,95,70,0.3);
 }
 
-nav {display:flex;gap:3px}
+nav {display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+nav::-webkit-scrollbar{display:none}
 
 nav button {
   background: none;
@@ -747,17 +748,17 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
 <!-- ══ APP ══ -->
 <div id="app" style="display:none">
   <header>
-    <div class="logo">Reals<span>Cal</span></div>
-    <nav id="nav"></nav>
-    <div class="fc" style="gap:8px">
+    <div class="logo" style="flex-shrink:0">Reals<span>Cal</span></div>
+    <nav id="nav" style="flex:1;overflow-x:auto;min-width:0;scrollbar-width:none;-ms-overflow-style:none;padding:0 8px"></nav>
+    <div class="fc" style="gap:8px;flex-shrink:0">
       <div id="role-switch" style="display:none">
-        <button id="switch-btn" onclick="switchRole()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.78rem;font-weight:700;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.18)'" onmouseout="this.style.background='rgba(255,255,255,.1)'"></button>
+        <button id="switch-btn" onclick="switchRole()" style="background:rgba(6,95,70,0.1);border:1px solid rgba(6,95,70,0.2);color:var(--primary);border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.78rem;font-weight:700;transition:.15s;white-space:nowrap"></button>
       </div>
-      <div id="plan-badge" style="display:none;background:rgba(232,200,74,.15);color:#e8c84a;border:1px solid rgba(232,200,74,.3);border-radius:12px;padding:3px 10px;font-size:.7rem;font-weight:800;letter-spacing:.3px"></div>
-      <div class="user-pill" onclick="logout()">
+      <div id="plan-badge" style="display:none;background:rgba(232,200,74,.15);color:#a8720a;border:1px solid rgba(232,200,74,.3);border-radius:12px;padding:3px 10px;font-size:.7rem;font-weight:800;letter-spacing:.3px;white-space:nowrap"></div>
+      <div class="user-pill" onclick="logout()" style="white-space:nowrap;flex-shrink:0">
         <div class="dot" id="u-dot"></div>
-        <span id="u-name"></span>
-        <span style="opacity:.4;font-size:.72rem">↩ יציאה</span>
+        <span id="u-name" style="max-width:120px;overflow:hidden;text-overflow:ellipsis"></span>
+        <span style="opacity:.4;font-size:.72rem">↩</span>
       </div>
     </div>
   </header>
