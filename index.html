@@ -1934,6 +1934,7 @@ async function signContract(id){
       below_floor:      d.belowFloor || false,
       sale_date:        new Date().toISOString().split('T')[0],
       month_in_project: soldDealsInProj,
+      deal_id:          d.id,
     };
     await _sb.from('market_data').insert(mktRow);
   }
@@ -1956,6 +1957,12 @@ async function deleteD(id){
   if(a){ a.sold=false; a.reserved=false; }
   deals=deals.filter(x=>x.id!==id);
   await deleteFromCloud('deals', id);
+  // אם העסקה הייתה חתומה — מחק גם מ-market_data לפי deal_id
+  if(wasApproved){
+    await _sb.from('market_data').delete().eq('deal_id', id);
+    // רענן נתוני שוק אם הלשונית פתוחה
+    if(_marketData.length) loadMarketData();
+  }
   await saveAll(); renderDeals(); renderDash();
   toast(wasApproved ? '↩ עסקה בוטלה — הדירה חזרה לפנויות' : '🗑 עסקה נמחקה');
 }
