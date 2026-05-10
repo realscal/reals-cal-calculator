@@ -1210,6 +1210,10 @@ async function enterApp(user){
 }
 
 async function logout(){
+  if(_realtimeChannel){
+    _sb.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
   await _sb.auth.signOut();
   me=null; projects=[]; apts=[]; deals=[];
   cfg={premium:5,rate:7,vat:18,target:20};
@@ -3344,15 +3348,8 @@ function startRealtime(){
     });
 }
 
-// Stop realtime on logout
-const _origLogout = logout;
-async function logout(){
-  if(_realtimeChannel){
-    _sb.removeChannel(_realtimeChannel);
-    _realtimeChannel = null;
-  }
-  await _origLogout();
-}
+// Stop realtime on logout — cleanup merged into logout function above
+
 
 </script>
 </body>
