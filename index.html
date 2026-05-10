@@ -1289,6 +1289,7 @@ function buildManager(){
     <button onclick="showTab('users',this)">משתמשים</button>
     <button onclick="showTab('calc',this)">מחשבון</button>
     <button onclick="showTab('reports',this)">📊 דוחות</button>
+    ${me.email==='amitzamir32@gmail.com' ? '<button onclick="showTab(\'market\',this)">🌍 שוק</button>' : ''}
     `+clientsBtn;
 
   document.getElementById('content').innerHTML=`
@@ -1364,6 +1365,32 @@ function buildManager(){
       <button class="btn bn" onclick="loadPendingUsers()">🔄 רענן</button>
     </div>
     <div id="clients-list"><div class="dim" style="padding:40px;text-align:center">לחץ רענן לטעון לקוחות</div></div>
+  </div>
+
+  <!-- MARKET TAB -->
+  <div class="tab" id="tab-market">
+    <div class="fb mb4">
+      <div style="font-family:'Playfair Display',serif;font-size:1.3rem">🌍 ניתוח שוק</div>
+      <div class="fc" style="gap:8px">
+        <select id="mkt-city" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,0.7);font-family:'Heebo',sans-serif;font-size:.84rem" onchange="renderMarket()">
+          <option value="">כל הערים</option>
+        </select>
+        <select id="mkt-type" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,0.7);font-family:'Heebo',sans-serif;font-size:.84rem" onchange="renderMarket()">
+          <option value="">כל הטיפוסים</option>
+        </select>
+        <select id="mkt-period" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,0.7);font-family:'Heebo',sans-serif;font-size:.84rem" onchange="renderMarket()">
+          <option value="all">כל הזמנים</option>
+          <option value="90">90 יום אחרון</option>
+          <option value="180">6 חודשים</option>
+          <option value="365">שנה אחרונה</option>
+        </select>
+        <button class="btn bgh bsm" onclick="exportMarketCSV()">⬇ CSV</button>
+        <button class="btn bgh bsm" onclick="loadMarketData()">🔄 רענן</button>
+      </div>
+    </div>
+    <div id="market-content">
+      <div class="empty dim">לחץ רענן לטעון נתוני שוק</div>
+    </div>
   </div>
 
   <!-- REPORTS TAB -->
@@ -1872,7 +1899,41 @@ async function signContract(id){
     const apt=apts.find(a=>a.id===d.aptId);
     if(apt){ apt.sold=true; apt.reserved=false; }
   }
-  await saveAll(); renderDeals(); renderDash(); renderProjects();
+  await saveAll();
+
+  // ── Write anonymous market data ──
+  if(d){
+    const apt  = apts.find(a=>a.id===d.aptId);
+    const proj = projects.find(p=>p.id===d.projId);
+    const soldDealsInProj = deals.filter(x=>x.projId===d.projId&&x.status==='APP').length;
+    const spreadType = d.pmts?.length===1 ? 'מזומן' :
+                       d.pmts?.[0]?.pct>=80 ? 'מזומן כמעט' :
+                       d.pmts?.[d.pmts.length-1]?.months<=12 ? 'קצרה' :
+                       d.pmts?.[d.pmts.length-1]?.months<=24 ? 'בינונית' : 'ארוכה';
+    const mktRow = {
+      city:             proj?.loc || null,
+      apt_type:         d.aptType || apt?.type || null,
+      rooms:            apt?.type ? parseFloat(apt.type) || null : null,
+      area:             apt?.area || null,
+      balcony:          apt?.balcony || 0,
+      garden:           apt?.garden  || 0,
+      price_per_sqm:    apt?.sqm || null,
+      floor_price:      d.tNet ? d.tNet*(1+(projCfg(proj).vat/100)) : null,
+      gross_price:      d.gross || null,
+      discount_pct:     d.discPct || 0,
+      discount_amt:     d.discAmt || 0,
+      spread_type:      spreadType,
+      spread_first_pct: d.pmts?.[0]?.pct || null,
+      spread_months:    d.pmts?.[d.pmts.length-1]?.months || 0,
+      npv_excess:       d.excess || 0,
+      below_floor:      d.belowFloor || false,
+      sale_date:        new Date().toISOString().split('T')[0],
+      month_in_project: soldDealsInProj,
+    };
+    await _sb.from('market_data').insert(mktRow);
+  }
+
+  renderDeals(); renderDash(); renderProjects();
   toast('🎉 חוזה נחתם! הדירה נמכרה סופית');
 }
 async function deleteD(id){
@@ -2372,6 +2433,7 @@ function showTab(name,btn){
   if(name==='calc') renderDCF();
   if(name==='clients') loadPendingUsers();
   if(name==='reports') renderReports();
+  if(name==='market')  loadMarketData();
 }
 
 // ════════════════════════════════════════════
@@ -2967,6 +3029,217 @@ window.addEventListener('storage',e=>{
   if(e.key===SK.deals){    deals=JSON.parse(e.newValue||'[]');     if(me?.role==='manager'){renderDeals();renderDash();} }
   if(e.key===SK.users){    users=JSON.parse(e.newValue||'[]'); }
 });
+
+// ════════════════════════════════════════════
+//  MARKET ANALYSIS
+// ════════════════════════════════════════════
+let _marketData = [];
+
+async function loadMarketData(){
+  const el = document.getElementById('market-content');
+  if(el) el.innerHTML = '<div class="empty dim">טוען נתוני שוק...</div>';
+  const {data, error} = await _sb.from('market_data').select('*').order('sale_date', {ascending:false});
+  if(error){ if(el) el.innerHTML='<div class="empty cred">שגיאה בטעינת נתונים</div>'; return; }
+  _marketData = data || [];
+  // Populate filters
+  const cities = [...new Set(_marketData.map(r=>r.city).filter(Boolean))].sort();
+  const types  = [...new Set(_marketData.map(r=>r.apt_type).filter(Boolean))].sort();
+  const cityEl = document.getElementById('mkt-city');
+  const typeEl = document.getElementById('mkt-type');
+  if(cityEl){
+    cityEl.innerHTML = '<option value="">כל הערים</option>' + cities.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+  if(typeEl){
+    typeEl.innerHTML = '<option value="">כל הטיפוסים</option>' + types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  }
+  renderMarket();
+}
+
+function filterMarketData(){
+  const city   = document.getElementById('mkt-city')?.value || '';
+  const type   = document.getElementById('mkt-type')?.value || '';
+  const period = document.getElementById('mkt-period')?.value || 'all';
+  let data = [..._marketData];
+  if(city)   data = data.filter(r=>r.city===city);
+  if(type)   data = data.filter(r=>r.apt_type===type);
+  if(period !== 'all'){
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - +period);
+    data = data.filter(r=>new Date(r.sale_date) >= cutoff);
+  }
+  return data;
+}
+
+function avg(arr, key){ const v=arr.map(r=>+r[key]).filter(x=>!isNaN(x)&&x!==null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
+function med(arr, key){ const v=arr.map(r=>+r[key]).filter(x=>!isNaN(x)&&x!==null).sort((a,b)=>a-b); return v.length ? v[Math.floor(v.length/2)] : null; }
+
+function renderMarket(){
+  const el = document.getElementById('market-content');
+  if(!el) return;
+  const data = filterMarketData();
+
+  if(!data.length){
+    el.innerHTML = `<div class="card"><div class="empty">
+      <div style="font-size:2rem;margin-bottom:12px">📭</div>
+      <div class="bold mb2">אין נתוני שוק עדיין</div>
+      <div class="dim s">הנתונים יצטברו אוטומטית עם כל חוזה שייחתם במערכת</div>
+    </div></div>`;
+    return;
+  }
+
+  // ── KPIs ──
+  const avgPsm    = avg(data,'gross_price')/avg(data,'area') || avg(data,'price_per_sqm');
+  const avgDisc   = avg(data,'discount_pct');
+  const avgExcess = avg(data,'npv_excess');
+  const belowFlr  = data.filter(r=>r.below_floor).length;
+  const medMonths = med(data,'spread_months');
+
+  let html = `
+  <div class="kpi-row mb4" style="grid-template-columns:repeat(5,1fr)">
+    <div class="kpi"><div class="kpi-lbl">עסקאות בניתוח</div><div class="kpi-val cg">${data.length}</div><div class="kpi-sub">חוזים חתומים</div></div>
+    <div class="kpi"><div class="kpi-lbl">מחיר ממוצע למ"ר</div><div class="kpi-val cblue">${avgPsm?fmt(Math.round(avgPsm)):'—'}</div><div class="kpi-sub">ברוטו כולל מע"מ</div></div>
+    <div class="kpi"><div class="kpi-lbl">הנחה ממוצעת</div><div class="kpi-val corange">${avgDisc!==null?avgDisc.toFixed(1)+'%':'—'}</div><div class="kpi-sub">מהמחירון</div></div>
+    <div class="kpi"><div class="kpi-lbl">NPV עודף ממוצע</div><div class="kpi-val ${avgExcess>=0?'cgreen':'cred'}">${avgExcess!==null?fmt(Math.round(avgExcess)):'—'}</div><div class="kpi-sub">מעל יעד</div></div>
+    <div class="kpi"><div class="kpi-lbl">מתחת לרצפה</div><div class="kpi-val ${belowFlr>0?'cred':'cgreen'}">${belowFlr}</div><div class="kpi-sub">עסקאות חריגות</div></div>
+  </div>`;
+
+  // ── By city ──
+  const cities = [...new Set(data.map(r=>r.city).filter(Boolean))];
+  if(cities.length){
+    html += `<div class="card mb4">
+      <div class="card-hd"><h3>ניתוח לפי עיר</h3></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>עיר</th><th>עסקאות</th><th>מחיר ממוצע למ"ר</th><th>חציון מחיר</th>
+          <th>הנחה ממוצעת</th><th>הנחה מקסימלית</th><th>פריסה חציונית</th><th>מתחת לרצפה</th>
+        </tr></thead>
+        <tbody>${cities.map(city=>{
+          const cd = data.filter(r=>r.city===city);
+          const cAvgPsm = cd.reduce((s,r)=>s+(r.gross_price&&r.area?r.gross_price/r.area:0),0)/cd.filter(r=>r.gross_price&&r.area).length;
+          const cMedPsm = med(cd.map(r=>r.gross_price&&r.area?{v:r.gross_price/r.area}:null).filter(Boolean).map(r=>({gross_price:r.v,area:1})),'gross_price');
+          const cAvgDisc= avg(cd,'discount_pct');
+          const cMaxDisc= Math.max(...cd.map(r=>r.discount_pct||0));
+          const cMedMon = med(cd,'spread_months');
+          const cBelow  = cd.filter(r=>r.below_floor).length;
+          return `<tr>
+            <td class="bold">${city}</td>
+            <td>${cd.length}</td>
+            <td class="bold cblue">${cAvgPsm?fmt(Math.round(cAvgPsm)):'—'}</td>
+            <td>${cMedPsm?fmt(Math.round(cMedPsm)):'—'}</td>
+            <td class="${cAvgDisc>5?'cred bold':'corange'}">${cAvgDisc!==null?cAvgDisc.toFixed(1)+'%':'—'}</td>
+            <td class="cred">${cMaxDisc?cMaxDisc.toFixed(1)+'%':'—'}</td>
+            <td class="dim">${cMedMon!==null?cMedMon+' חודשים':'—'}</td>
+            <td class="${cBelow>0?'cred bold':'cgreen'}">${cBelow}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // ── By apt type ──
+  const types = [...new Set(data.map(r=>r.apt_type).filter(Boolean))].sort();
+  if(types.length){
+    html += `<div class="card mb4">
+      <div class="card-hd"><h3>ניתוח לפי טיפוס דירה</h3></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>טיפוס</th><th>עסקאות</th><th>שטח ממוצע</th><th>מחיר ממוצע למ"ר</th>
+          <th>הנחה ממוצעת</th><th>פריסה נפוצה</th><th>NPV עודף ממוצע</th>
+        </tr></thead>
+        <tbody>${types.map(type=>{
+          const td = data.filter(r=>r.apt_type===type);
+          const tAvgArea= avg(td,'area');
+          const tAvgPsm = td.reduce((s,r)=>s+(r.gross_price&&r.area?r.gross_price/r.area:0),0)/td.filter(r=>r.gross_price&&r.area).length;
+          const tAvgDisc= avg(td,'discount_pct');
+          const tAvgEx  = avg(td,'npv_excess');
+          // Most common spread type
+          const spreadCounts = td.reduce((acc,r)=>{ if(r.spread_type) acc[r.spread_type]=(acc[r.spread_type]||0)+1; return acc; },{});
+          const topSpread = Object.entries(spreadCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+          return `<tr>
+            <td class="bold">${type}</td>
+            <td>${td.length}</td>
+            <td>${tAvgArea?Math.round(tAvgArea)+' מ"ר':'—'}</td>
+            <td class="bold cblue">${tAvgPsm?fmt(Math.round(tAvgPsm)):'—'}</td>
+            <td class="${tAvgDisc>5?'cred bold':'corange'}">${tAvgDisc!==null?tAvgDisc.toFixed(1)+'%':'—'}</td>
+            <td class="dim xs">${topSpread}</td>
+            <td class="${tAvgEx>=0?'cgreen':'cred'} bold">${tAvgEx!==null?fmt(Math.round(tAvgEx)):'—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // ── By spread type ──
+  const spreads = [...new Set(data.map(r=>r.spread_type).filter(Boolean))];
+  if(spreads.length){
+    html += `<div class="card mb4">
+      <div class="card-hd"><h3>ניתוח לפי פריסת תשלומים</h3></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>סוג פריסה</th><th>עסקאות</th><th>הנחה ממוצעת</th><th>NPV עודף ממוצע</th><th>מתחת לרצפה</th>
+        </tr></thead>
+        <tbody>${spreads.map(sp=>{
+          const sd = data.filter(r=>r.spread_type===sp);
+          const sAvgDisc = avg(sd,'discount_pct');
+          const sAvgEx   = avg(sd,'npv_excess');
+          const sBelow   = sd.filter(r=>r.below_floor).length;
+          return `<tr>
+            <td class="bold">${sp}</td>
+            <td>${sd.length}</td>
+            <td class="${sAvgDisc>5?'cred bold':'corange'}">${sAvgDisc!==null?sAvgDisc.toFixed(1)+'%':'—'}</td>
+            <td class="${sAvgEx>=0?'cgreen':'cred'} bold">${sAvgEx!==null?fmt(Math.round(sAvgEx)):'—'}</td>
+            <td class="${sBelow>0?'cred':'cgreen'}">${sBelow}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // ── Raw data table ──
+  html += `<div class="card">
+    <div class="card-hd"><h3>כל העסקאות — טבלה מלאה</h3><span class="dim xs">${data.length} רשומות</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>תאריך</th><th>עיר</th><th>טיפוס</th><th>שטח</th><th>מרפסת</th><th>גינה</th>
+        <th>מחיר למ"ר</th><th>מחיר סגירה</th><th>הנחה</th><th>פריסה</th><th>NPV עודף</th><th>חריגה</th>
+      </tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td class="dim xs">${r.sale_date||'—'}</td>
+        <td>${r.city||'—'}</td>
+        <td class="bold">${r.apt_type||'—'}</td>
+        <td>${r.area?r.area+' מ"ר':'—'}</td>
+        <td class="dim xs">${r.balcony?r.balcony+' מ"ר':'—'}</td>
+        <td class="dim xs">${r.garden?r.garden+' מ"ר':'—'}</td>
+        <td>${r.gross_price&&r.area?fmt(Math.round(r.gross_price/r.area)):'—'}</td>
+        <td class="bold">${r.gross_price?fmt(r.gross_price):'—'}</td>
+        <td class="${(r.discount_pct||0)>5?'cred bold':'corange'}">${r.discount_pct?r.discount_pct.toFixed(1)+'%':'0%'}</td>
+        <td class="dim xs">${r.spread_type||'—'} ${r.spread_months?'('+r.spread_months+'m)':''}</td>
+        <td class="${(r.npv_excess||0)>=0?'cgreen':'cred'} bold">${r.npv_excess?fmt(Math.round(r.npv_excess)):'—'}</td>
+        <td>${r.below_floor?'<span class="bdg bdg-r">⚠️ כן</span>':'<span class="bdg bdg-g">תקין</span>'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function exportMarketCSV(){
+  const data = filterMarketData();
+  if(!data.length){ toast('אין נתונים לייצוא'); return; }
+  const rows = [['תאריך','עיר','טיפוס','שטח','מרפסת','גינה','מחיר למ"ר','מחיר סגירה','% הנחה','סכום הנחה','פריסה','חודשים','NPV עודף','מתחת לרצפה']];
+  data.forEach(r => rows.push([
+    r.sale_date||'', r.city||'', r.apt_type||'', r.area||'',
+    r.balcony||0, r.garden||0,
+    r.gross_price&&r.area ? Math.round(r.gross_price/r.area) : '',
+    r.gross_price||'', r.discount_pct||0, r.discount_amt||0,
+    r.spread_type||'', r.spread_months||0, r.npv_excess||0,
+    r.below_floor?'כן':'לא'
+  ]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='market_data.csv'; a.click();
+  toast('📥 נתוני שוק יוצאו בהצלחה');
+}
 
 // ════════════════════════════════════════════
 //  BOOT
