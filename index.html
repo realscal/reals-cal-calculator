@@ -2338,9 +2338,18 @@ function toggleSvLoan(){
 // מחשב עלות הלוואת קבלן — סך הריבית שמשלם היזם
 function calcLoanCost(amt, months, annualRate){
   if(!amt || !months || !annualRate) return 0;
-  const monthlyRate = annualRate/100/12;
-  // ריבית פשוטה על כל התקופה (ניתן להחליף לריבית דריבית)
-  return amt * monthlyRate * months;
+  return amt * (annualRate/100/12) * months;
+}
+
+// מחשב רצפת מכירה עם הלוואת קבלן
+// ההלוואה נכנסת ביום 0 (מקטינה את הסכום שצריך לגבות מהלקוח)
+// עלות הריבית מנוכה מהיעד (הוצאה שמקטינה רווח)
+function calcFloorWithLoan(tN, f, vat, loan){
+  if(!loan) return tN/f*(1+vat/100);
+  const loanPVNet   = loan.amt/(1+vat/100);   // PV ההלוואה נטו
+  const loanCostNet = loan.cost/(1+vat/100);  // עלות ריבית נטו
+  // רצפה = (יעד - PV הלוואה + עלות ריבית) / NPV Factor * (1+מע"מ)
+  return ((tN - loanPVNet + loanCostNet) / f) * (1+vat/100);
 }
 
 // קרא נתוני הלוואה מהמחשבון הרלוונטי
@@ -2374,10 +2383,8 @@ function runCalc(){
 
   // הלוואת קבלן
   const loan = getCalcLoan('calc');
-  const loanCostNet = loan ? loan.cost/(1+_pc.vat/100) : 0; // עלות הלוואה נטו
-
-  const minN = (tN + loanCostNet) / f;
-  const flrG = minN*(1+_pc.vat/100);
+  const flrG = calcFloorWithLoan(tN, f, _pc.vat, loan);
+  const minN = flrG/(1+_pc.vat/100);
   const mkt  = calcApt.mkt || 0;
 
   const fp   = document.getElementById('calc-floor-price');
@@ -2437,9 +2444,10 @@ function calcCheckOffer(){
   const offer = +document.getElementById('calc-offer').value;
   const el    = document.getElementById('calc-offer-res');
   if(!offer || !calcApt){ if(el) el.innerHTML=''; return; }
-  const _pc = projCfg(calcProj);
-  const f=npvF(calcPmts,_pc.rate);
-  const flrG = targetNet(calcApt)/f*(1+_pc.vat/100);
+  const _pc  = projCfg(calcProj);
+  const loan = getCalcLoan('calc');
+  const f    = npvF(calcPmts,_pc.rate);
+  const flrG = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan);
   const ok   = offer >= flrG;
   const diff = offer - flrG;
   const npvNet = offer/(1+_pc.vat/100)*f;
@@ -2478,8 +2486,9 @@ function calcCheckOffer(){
 async function submitDealMgr(offerPrice){
   if(!calcApt || !calcProj || !me) return;
   const _pc     = projCfg(calcProj);
+  const loan    = getCalcLoan('calc');
   const f       = npvF(calcPmts, _pc.rate);
-  const flrG    = targetNet(calcApt)/f*(1+_pc.vat/100);
+  const flrG    = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan);
   const isBelowFloor = offerPrice < flrG;
   const aptInfo = 'דירה ' + calcApt.num + ' — ' + calcProj.name;
   const warnMsg = isBelowFloor
@@ -2794,9 +2803,8 @@ function calcFloor(){
 
   // הלוואת קבלן
   const loan = getCalcLoan('sv');
-  const loanCostNet = loan ? loan.cost/(1+_spc.vat/100) : 0;
-
-  const flrG = (targetNet(svApt) + loanCostNet) / f * (1+_spc.vat/100);
+  const tN_sv = targetNet(svApt);
+  const flrG = calcFloorWithLoan(tN_sv, f, _spc.vat, loan);
 
   const mkt = svApt.mkt||0;
   document.getElementById('sv-floor-price').textContent = fmt(flrG);
@@ -2828,9 +2836,8 @@ function checkOffer(){
   if(!offer||!svApt){el.innerHTML='';return;}
   const _spc = projCfg(svProj);
   const loan  = getCalcLoan('sv');
-  const loanCostNet = loan ? loan.cost/(1+_spc.vat/100) : 0;
   const f=npvF(svPmts,_spc.rate);
-  const flrG=(targetNet(svApt)+loanCostNet)/f*(1+_spc.vat/100);
+  const flrG = calcFloorWithLoan(targetNet(svApt), f, _spc.vat, loan);
   const ok=offer>=flrG;
 
   const mkt2 = svApt.mkt||0;
@@ -3159,9 +3166,11 @@ async function submitDeal(offerPrice){
   if(!svApt || !svProj || !me) return;
   if(!confirm('לאשר עסקה לדירה ' + svApt.num + ' ב-' + fmt(offerPrice) + '?')) return;
 
-  const f      = npvF(svPmts, projCfg(svProj).rate);
-  const flrG   = targetNet(svApt)/f*(1+projCfg(svProj).vat/100);
-  const priceNet = offerPrice/(1+projCfg(svProj).vat/100);
+  const _svpc   = projCfg(svProj);
+  const loan_sv = getCalcLoan('sv');
+  const f      = npvF(svPmts, _svpc.rate);
+  const flrG   = calcFloorWithLoan(targetNet(svApt), f, _svpc.vat, loan_sv);
+  const priceNet = offerPrice/(1+_svpc.vat/100);
   const npvNet   = priceNet*f;
   const tNet     = targetNet(svApt);
   const excess   = npvNet - tNet;
