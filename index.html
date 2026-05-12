@@ -1457,6 +1457,35 @@ function buildManager(){
           <div id="calc-pmts-list"></div>
           <button class="btn bgh bsm mt2" onclick="addCalcPmt()">+ פעימה</button>
           <div class="ib ib-o mt3 s">ריבית היוון: <strong id="calc-rate-lbl">${cfg.rate}%</strong> שנתי</div>
+
+          <hr>
+          <!-- הלוואת קבלן -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink2)">
+              <input type="checkbox" id="calc-loan-toggle" onchange="toggleCalcLoan()" style="accent-color:var(--primary);width:15px;height:15px">
+              הלוואת קבלן
+            </label>
+            <span class="bdg bdg-b" style="font-size:.65rem">אופציונלי</span>
+          </div>
+          <div id="calc-loan-fields" style="display:none">
+            <div class="ib ib-b s mb3">הלוואה שניתנת ללקוח ונכנסת לתזרים מיידית — היזם משלם ריבית לאורך תקופת ההלוואה</div>
+            <div class="g3">
+              <div class="fg">
+                <label>סכום הלוואה (₪)</label>
+                <input type="number" id="calc-loan-amt" placeholder="500,000" oninput="runCalc()" style="font-weight:700;border-color:var(--blue);background:var(--blue-lt)">
+              </div>
+              <div class="fg">
+                <label>תקופה (חודשים)</label>
+                <input type="number" id="calc-loan-months" placeholder="36" oninput="runCalc()">
+                <div class="hint">בד"כ עד סיום הפרויקט</div>
+              </div>
+              <div class="fg">
+                <label>ריבית שנתית (%)</label>
+                <input type="number" id="calc-loan-rate" placeholder="4" step=".5" oninput="runCalc()">
+                <div class="hint">עלות ההלוואה ליזם</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2264,6 +2293,50 @@ function renderCalcPmts(){
     </div>`).join('');
   calcPmtTotal();
 }
+function toggleCalcLoan(){
+  const on = document.getElementById('calc-loan-toggle')?.checked;
+  const fields = document.getElementById('calc-loan-fields');
+  if(fields) fields.style.display = on ? 'block' : 'none';
+  if(!on){
+    // clear fields
+    ['calc-loan-amt','calc-loan-months','calc-loan-rate'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+  }
+  runCalc();
+}
+
+function toggleSvLoan(){
+  const on = document.getElementById('sv-loan-toggle')?.checked;
+  const fields = document.getElementById('sv-loan-fields');
+  if(fields) fields.style.display = on ? 'block' : 'none';
+  if(!on){
+    ['sv-loan-amt','sv-loan-months','sv-loan-rate'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+  }
+  calcFloor();
+}
+
+// מחשב עלות הלוואת קבלן — סך הריבית שמשלם היזם
+function calcLoanCost(amt, months, annualRate){
+  if(!amt || !months || !annualRate) return 0;
+  const monthlyRate = annualRate/100/12;
+  // ריבית פשוטה על כל התקופה (ניתן להחליף לריבית דריבית)
+  return amt * monthlyRate * months;
+}
+
+// קרא נתוני הלוואה מהמחשבון הרלוונטי
+function getCalcLoan(prefix){
+  const toggle = document.getElementById(prefix+'-loan-toggle');
+  if(!toggle?.checked) return null;
+  const amt    = +document.getElementById(prefix+'-loan-amt')?.value    || 0;
+  const months = +document.getElementById(prefix+'-loan-months')?.value || 0;
+  const rate   = +document.getElementById(prefix+'-loan-rate')?.value   || 0;
+  if(!amt || !months || !rate) return null;
+  return { amt, months, rate, cost: calcLoanCost(amt, months, rate) };
+}
+
 function addCalcPmt(){ calcPmts.push({label:'תשלום '+(calcPmts.length+1),pct:0,months:12}); renderCalcPmts(); }
 function calcPmtTotal(){
   const t = calcPmts.reduce((a,p)=>a+p.pct,0);
@@ -2277,11 +2350,17 @@ function runCalc(){
   if(!calcApt || t!==100){ if(res) res.style.display='none'; return; }
   if(res) res.style.display='block';
 
-  const _pc=projCfg(calcProj); const r=mr(_pc.rate);
-  const f=npvF(calcPmts,_pc.rate);
+  const _pc  = projCfg(calcProj);
+  const r    = mr(_pc.rate);
+  const f    = npvF(calcPmts,_pc.rate);
   const tN   = targetNet(calcApt);
-  const minN = tN / f;
-  const flrG=minN*(1+_pc.vat/100);
+
+  // הלוואת קבלן
+  const loan = getCalcLoan('calc');
+  const loanCostNet = loan ? loan.cost/(1+_pc.vat/100) : 0; // עלות הלוואה נטו
+
+  const minN = (tN + loanCostNet) / f;
+  const flrG = minN*(1+_pc.vat/100);
   const mkt  = calcApt.mkt || 0;
 
   const fp   = document.getElementById('calc-floor-price');
@@ -2323,9 +2402,12 @@ function runCalc(){
 
   const sm = document.getElementById('calc-summary');
   if(sm) sm.innerHTML =
-    'NPV Factor: <strong>'+f.toFixed(4)+'</strong> | יעד נטו: '+fmt(tN)+' | מינימום נטו: '+fmt(minN)+
+    'NPV Factor: <strong>'+f.toFixed(4)+'</strong> | יעד נטו: '+fmt(tN)+
+    (loan?' | <span class="cblue">עלות הלוואה: '+fmt(loan.cost)+'</span>':'')+
+    ' | מינימום נטו: '+fmt(minN)+
     ' | <span class="cred bold">מינימום ברוטו: '+fmt(flrG)+'</span>'+
-    (mkt?' | מחירון: '+fmt(mkt)+' | <span class="cgreen bold">מרווח: '+fmt(mkt-flrG)+' ('+((mkt-flrG)/mkt*100).toFixed(1)+'%)</span>':'');
+    (mkt?' | מחירון: '+fmt(mkt)+' | <span class="cgreen bold">מרווח: '+fmt(mkt-flrG)+' ('+((mkt-flrG)/mkt*100).toFixed(1)+'%)</span>':'')+
+    (loan?'<br><span class="dim xs">הלוואת קבלן: '+fmt(loan.amt)+' | '+loan.months+' חודשים | '+loan.rate+'% שנתי | עלות כוללת: '+fmt(loan.cost)+'</span>':'');
 
   // Clear offer
   const oi = document.getElementById('calc-offer');
@@ -2504,6 +2586,34 @@ function buildSales(){
       <div id="sv-pmts-list"></div>
       <button class="btn bgh bsm mt2" onclick="addSVPmt()">+ פעימה</button>
 
+      <hr>
+      <!-- הלוואת קבלן -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink2)">
+          <input type="checkbox" id="sv-loan-toggle" onchange="toggleSvLoan()" style="accent-color:var(--primary);width:15px;height:15px">
+          הלוואת קבלן
+        </label>
+        <span class="bdg bdg-b" style="font-size:.65rem">אופציונלי</span>
+      </div>
+      <div id="sv-loan-fields" style="display:none">
+        <div class="ib ib-b s mb3">הלוואה שניתנת ללקוח ונכנסת לתזרים מיידית — היזם משלם ריבית לאורך תקופת ההלוואה</div>
+        <div class="g3">
+          <div class="fg">
+            <label>סכום הלוואה (₪)</label>
+            <input type="number" id="sv-loan-amt" placeholder="500,000" oninput="calcFloor()" style="font-weight:700;border-color:var(--blue);background:var(--blue-lt)">
+          </div>
+          <div class="fg">
+            <label>תקופה (חודשים)</label>
+            <input type="number" id="sv-loan-months" placeholder="36" oninput="calcFloor()">
+            <div class="hint">בד"כ עד סיום הפרויקט</div>
+          </div>
+          <div class="fg">
+            <label>ריבית שנתית (%)</label>
+            <input type="number" id="sv-loan-rate" placeholder="4" step=".5" oninput="calcFloor()">
+            <div class="hint">עלות ההלוואה ליזם</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- RESULT -->
@@ -2653,8 +2763,14 @@ function calcFloor(){
   if(!svApt||t!==100){if(res)res.style.display='none';return;}
   if(res)res.style.display='block';
 
-  const f   = npvF(svPmts,projCfg(svProj).rate);
-  const flrG= targetNet(svApt)/f*(1+projCfg(svProj).vat/100);
+  const _spc = projCfg(svProj);
+  const f    = npvF(svPmts, _spc.rate);
+
+  // הלוואת קבלן
+  const loan = getCalcLoan('sv');
+  const loanCostNet = loan ? loan.cost/(1+_spc.vat/100) : 0;
+
+  const flrG = (targetNet(svApt) + loanCostNet) / f * (1+_spc.vat/100);
 
   const mkt = svApt.mkt||0;
   document.getElementById('sv-floor-price').textContent = fmt(flrG);
@@ -2666,7 +2782,8 @@ function calcFloor(){
     const discAmt = mkt - flrG;
     const discPct = (discAmt / mkt * 100);
     pctEl.textContent = fmt(discAmt);
-    amtEl.textContent = discPct.toFixed(1) + '% הנחה על המחירון';
+    amtEl.textContent = discPct.toFixed(1) + '% הנחה על המחירון'
+      + (loan ? ' | עלות הלוואה: '+fmt(loan.cost) : '');
   } else if(!mkt){
     pctEl.textContent = '—';
     amtEl.textContent = 'לא הוזן מחיר מחירון לדירה זו';
@@ -2683,8 +2800,11 @@ function checkOffer(){
   const offer=+document.getElementById('sv-offer').value;
   const el=document.getElementById('sv-offer-res');
   if(!offer||!svApt){el.innerHTML='';return;}
-  const f=npvF(svPmts,projCfg(svProj).rate);
-  const flrG=targetNet(svApt)/f*(1+projCfg(svProj).vat/100);
+  const _spc = projCfg(svProj);
+  const loan  = getCalcLoan('sv');
+  const loanCostNet = loan ? loan.cost/(1+_spc.vat/100) : 0;
+  const f=npvF(svPmts,_spc.rate);
+  const flrG=(targetNet(svApt)+loanCostNet)/f*(1+_spc.vat/100);
   const ok=offer>=flrG;
 
   const mkt2 = svApt.mkt||0;
