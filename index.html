@@ -2336,21 +2336,17 @@ function toggleSvLoan(){
 }
 
 // מחשב NPV נטו של הלוואת קבלן ליזם
-// יזם מקבל: loanAmt ביום 0
-// יזם משלם: ריבית חודשית לאורך התקופה
-// לקוח מחזיר קרן לבנק (לא ליזם) — לכן לא נכנסת לחישוב
+// יזם מקבל ביום 0: loanAmt
+// יזם משלם ביום 0: כל הריבית לכל התקופה מראש
+// נטו ביום 0: loanAmt - totalInterest
+// לקוח מחזיר קרן לבנק בסוף — לא ליזם
 function calcLoanNPV(loan, discRate, vat){
   if(!loan || !loan.amt || !loan.months || !loan.rate) return 0;
-  const r = mr(discRate);
-  const monthlyInterest = loan.amt * (loan.rate/100/12);
-  // PV של ריבית חודשית שיזם משלם לבנק
-  let pvInterest = 0;
-  for(let m=1; m<=loan.months; m++){
-    pvInterest += monthlyInterest / Math.pow(1+r, m);
-  }
-  // NPV נטו ליזם = מה שמקבל ביום 0 פחות PV הריבית שמשלם
-  // הקרן מוחזרת ע"י הלקוח לבנק — לא ליזם
-  return (loan.amt - pvInterest) / (1+vat/100);
+  // ריבית פשוטה לכל התקופה משולמת מראש ביום 0
+  const totalInterest = loan.amt * (loan.rate/100/12) * loan.months;
+  const netReceived   = loan.amt - totalInterest;
+  // הכל ביום 0 — אין היוון
+  return netReceived / (1+vat/100);
 }
 
 // מחשב רצפת מכירה עם הלוואת קבלן
