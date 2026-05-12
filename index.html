@@ -2335,21 +2335,32 @@ function toggleSvLoan(){
   calcFloor();
 }
 
-// מחשב עלות הלוואת קבלן — סך הריבית שמשלם היזם
-function calcLoanCost(amt, months, annualRate){
-  if(!amt || !months || !annualRate) return 0;
-  return amt * (annualRate/100/12) * months;
+// מחשב NPV נטו של הלוואת קבלן ליזם
+// יזם מקבל: loanAmt ביום 0
+// יזם משלם: ריבית חודשית לאורך התקופה
+// לקוח מחזיר קרן לבנק (לא ליזם) — לכן לא נכנסת לחישוב
+function calcLoanNPV(loan, discRate, vat){
+  if(!loan || !loan.amt || !loan.months || !loan.rate) return 0;
+  const r = mr(discRate);
+  const monthlyInterest = loan.amt * (loan.rate/100/12);
+  // PV של ריבית חודשית שיזם משלם לבנק
+  let pvInterest = 0;
+  for(let m=1; m<=loan.months; m++){
+    pvInterest += monthlyInterest / Math.pow(1+r, m);
+  }
+  // NPV נטו ליזם = מה שמקבל ביום 0 פחות PV הריבית שמשלם
+  // הקרן מוחזרת ע"י הלקוח לבנק — לא ליזם
+  return (loan.amt - pvInterest) / (1+vat/100);
 }
 
 // מחשב רצפת מכירה עם הלוואת קבלן
-// ההלוואה נכנסת ביום 0 (מקטינה את הסכום שצריך לגבות מהלקוח)
-// עלות הריבית מנוכה מהיעד (הוצאה שמקטינה רווח)
-function calcFloorWithLoan(tN, f, vat, loan){
-  if(!loan) return tN/f*(1+vat/100);
-  const loanPVNet   = loan.amt/(1+vat/100);   // PV ההלוואה נטו
-  const loanCostNet = loan.cost/(1+vat/100);  // עלות ריבית נטו
-  // רצפה = (יעד - PV הלוואה + עלות ריבית) / NPV Factor * (1+מע"מ)
-  return ((tN - loanPVNet + loanCostNet) / f) * (1+vat/100);
+function calcFloorWithLoan(tN, f, vat, loan, discRate){
+  if(!loan || !loan.amt || !loan.months || !loan.rate){
+    return tN/f*(1+vat/100);
+  }
+  const loanNPVNet = calcLoanNPV(loan, discRate, vat);
+  // ה-NPV של ההלוואה מקטין את מה שצריך לגבות מהלקוח
+  return ((tN - loanNPVNet) / f) * (1+vat/100);
 }
 
 // קרא נתוני הלוואה מהמחשבון הרלוונטי
@@ -2360,7 +2371,7 @@ function getCalcLoan(prefix){
   const months = +document.getElementById(prefix+'-loan-months')?.value || 0;
   const rate   = +document.getElementById(prefix+'-loan-rate')?.value   || 0;
   if(!amt || !months || !rate) return null;
-  return { amt, months, rate, cost: calcLoanCost(amt, months, rate) };
+  return { amt, months, rate };
 }
 
 function addCalcPmt(){ calcPmts.push({label:'תשלום '+(calcPmts.length+1),pct:0,months:12}); renderCalcPmts(); }
@@ -2383,7 +2394,7 @@ function runCalc(){
 
   // הלוואת קבלן
   const loan = getCalcLoan('calc');
-  const flrG = calcFloorWithLoan(tN, f, _pc.vat, loan);
+  const flrG = calcFloorWithLoan(tN, f, _pc.vat, loan, _pc.rate);
   const minN = flrG/(1+_pc.vat/100);
   const mkt  = calcApt.mkt || 0;
 
@@ -2431,7 +2442,7 @@ function runCalc(){
     ' | מינימום נטו: '+fmt(minN)+
     ' | <span class="cred bold">מינימום ברוטו: '+fmt(flrG)+'</span>'+
     (mkt?' | מחירון: '+fmt(mkt)+' | <span class="cgreen bold">מרווח: '+fmt(mkt-flrG)+' ('+((mkt-flrG)/mkt*100).toFixed(1)+'%)</span>':'')+
-    (loan?'<br><span class="dim xs">הלוואת קבלן: '+fmt(loan.amt)+' | '+loan.months+' חודשים | '+loan.rate+'% שנתי | עלות כוללת: '+fmt(loan.cost)+'</span>':'');
+    (loan?` | <span class="cblue">הלוואת קבלן: ${fmt(loan.amt)} | ${loan.months} חודש | ${loan.rate}% | NPV נטו: ${fmt(Math.round(calcLoanNPV(loan,_pc.rate,_pc.vat)))}</span>`:'');
 
   // Clear offer
   const oi = document.getElementById('calc-offer');
@@ -2447,7 +2458,7 @@ function calcCheckOffer(){
   const _pc  = projCfg(calcProj);
   const loan = getCalcLoan('calc');
   const f    = npvF(calcPmts,_pc.rate);
-  const flrG = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan);
+  const flrG = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan, _pc.rate);
   const ok   = offer >= flrG;
   const diff = offer - flrG;
   const npvNet = offer/(1+_pc.vat/100)*f;
@@ -2488,7 +2499,7 @@ async function submitDealMgr(offerPrice){
   const _pc     = projCfg(calcProj);
   const loan    = getCalcLoan('calc');
   const f       = npvF(calcPmts, _pc.rate);
-  const flrG    = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan);
+  const flrG    = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan, _pc.rate);
   const isBelowFloor = offerPrice < flrG;
   const aptInfo = 'דירה ' + calcApt.num + ' — ' + calcProj.name;
   const warnMsg = isBelowFloor
@@ -2804,7 +2815,7 @@ function calcFloor(){
   // הלוואת קבלן
   const loan = getCalcLoan('sv');
   const tN_sv = targetNet(svApt);
-  const flrG = calcFloorWithLoan(tN_sv, f, _spc.vat, loan);
+  const flrG = calcFloorWithLoan(tN_sv, f, _spc.vat, loan, _spc.rate);
 
   const mkt = svApt.mkt||0;
   document.getElementById('sv-floor-price').textContent = fmt(flrG);
@@ -2837,7 +2848,7 @@ function checkOffer(){
   const _spc = projCfg(svProj);
   const loan  = getCalcLoan('sv');
   const f=npvF(svPmts,_spc.rate);
-  const flrG = calcFloorWithLoan(targetNet(svApt), f, _spc.vat, loan);
+  const flrG = calcFloorWithLoan(targetNet(svApt), f, _spc.vat, loan, _spc.rate);
   const ok=offer>=flrG;
 
   const mkt2 = svApt.mkt||0;
@@ -3169,7 +3180,7 @@ async function submitDeal(offerPrice){
   const _svpc   = projCfg(svProj);
   const loan_sv = getCalcLoan('sv');
   const f      = npvF(svPmts, _svpc.rate);
-  const flrG   = calcFloorWithLoan(targetNet(svApt), f, _svpc.vat, loan_sv);
+  const flrG   = calcFloorWithLoan(targetNet(svApt), f, _svpc.vat, loan_sv, _svpc.rate);
   const priceNet = offerPrice/(1+_svpc.vat/100);
   const npvNet   = priceNet*f;
   const tNet     = targetNet(svApt);
