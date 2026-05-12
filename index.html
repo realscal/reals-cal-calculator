@@ -2329,10 +2329,12 @@ function calcLoanCost(amt, months, annualRate){
 // קרא נתוני הלוואה מהמחשבון הרלוונטי
 function getCalcLoan(prefix){
   const toggle = document.getElementById(prefix+'-loan-toggle');
+  console.log('getCalcLoan prefix:', prefix, 'toggle:', toggle, 'checked:', toggle?.checked);
   if(!toggle?.checked) return null;
   const amt    = +document.getElementById(prefix+'-loan-amt')?.value    || 0;
   const months = +document.getElementById(prefix+'-loan-months')?.value || 0;
   const rate   = +document.getElementById(prefix+'-loan-rate')?.value   || 0;
+  console.log('loan values:', amt, months, rate);
   if(!amt || !months || !rate) return null;
   return { amt, months, rate, cost: calcLoanCost(amt, months, rate) };
 }
