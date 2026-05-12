@@ -2230,7 +2230,7 @@ function renderCalcApts(){
       <tbody>${avail.map(a=>{
         const sel = calcApt?.id === a.id;
         const bf  = bankFloor(a);
-        return `<tr onclick="selectCalcApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
+        return `<tr data-id="${a.id}" onclick="selectCalcApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
           <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
           <td>${a.floor}</td>
           <td>${a.type||'—'}</td>
@@ -2247,19 +2247,37 @@ function renderCalcApts(){
 }
 
 function selectCalcApt(id){
-  calcApt  = apts.find(a=>a.id===id);
+  calcApt = apts.find(a=>a.id===id);
   if(!calcApt || !calcProj) return;
-  // load project default payments
-  calcPmts = [{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+
+  // הדגש שורה בלי לבנות מחדש את הטבלה
+  document.querySelectorAll('#calc-apt-grid tr').forEach(tr=>{
+    tr.style.background = '';
+    tr.style.fontWeight = '';
+  });
+  const selectedTr = document.querySelector('#calc-apt-grid tr[data-id="'+id+'"]');
+  if(selectedTr){
+    selectedTr.style.background = 'rgba(6,95,70,0.1)';
+    selectedTr.style.fontWeight = '700';
+  }
+
+  // פתח שלב 3 רק אם זו בחירה ראשונה — אל תאפס פריסה קיימת
   const s3   = document.getElementById('calc-s3');
-  const res  = document.getElementById('calc-result');
   const ph   = document.getElementById('calc-placeholder');
   const info = document.getElementById('calc-apt-info');
-  if(s3)  s3.style.display  = 'block';
-  if(ph)  ph.style.display  = 'none';
-  if(info)info.style.display= 'block';
-  renderCalcApts();
-  // Show apt details
+  const isFirst = !s3 || s3.style.display === 'none';
+  if(isFirst){
+    calcPmts = [{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+    if(s3)  s3.style.display  = 'block';
+    if(ph)  ph.style.display  = 'none';
+    if(info)info.style.display= 'block';
+    renderCalcPmts();
+  } else {
+    // רק עדכן את פרטי הדירה — אל תגע בפריסה
+    if(info) info.style.display = 'block';
+  }
+
+  // עדכן פרטי דירה בפאנל הימני
   const det = document.getElementById('calc-apt-details');
   if(det){
     const bf = bankFloor(calcApt);
@@ -2277,7 +2295,6 @@ function selectCalcApt(id){
         ${calcApt.mkt?'<div style="grid-column:span 2"><span class="dim">מחיר שיווק</span><br><strong class="cg" style="font-size:1.1rem">'+fmt(calcApt.mkt)+'</strong></div>':''}
       </div>`;
   }
-  renderCalcPmts();
   runCalc();
 }
 
@@ -2329,12 +2346,10 @@ function calcLoanCost(amt, months, annualRate){
 // קרא נתוני הלוואה מהמחשבון הרלוונטי
 function getCalcLoan(prefix){
   const toggle = document.getElementById(prefix+'-loan-toggle');
-  console.log('getCalcLoan prefix:', prefix, 'toggle:', toggle, 'checked:', toggle?.checked);
   if(!toggle?.checked) return null;
   const amt    = +document.getElementById(prefix+'-loan-amt')?.value    || 0;
   const months = +document.getElementById(prefix+'-loan-months')?.value || 0;
   const rate   = +document.getElementById(prefix+'-loan-rate')?.value   || 0;
-  console.log('loan values:', amt, months, rate);
   if(!amt || !months || !rate) return null;
   return { amt, months, rate, cost: calcLoanCost(amt, months, rate) };
 }
@@ -2711,7 +2726,7 @@ function renderSVApts(){
       </tr></thead>
       <tbody>${avail.map(a=>{
         const sel = svApt?.id === a.id;
-        return `<tr onclick="selectApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
+        return `<tr data-id="${a.id}" onclick="selectApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
           <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
           <td>${a.floor}</td>
           <td>${a.type||'—'}</td>
@@ -2729,14 +2744,23 @@ function renderSVApts(){
 function selectApt(id){
   svApt=apts.find(a=>a.id===id);
   if(!svApt||!svProj) return;
-  // load project default payments
-  svPmts=[{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+
+  // הדגש שורה בלי לבנות מחדש
+  document.querySelectorAll('#sv-apt-grid tr').forEach(tr=>{
+    tr.style.background=''; tr.style.fontWeight='';
+  });
+  const selectedTr = document.querySelector('#sv-apt-grid tr[data-id="'+id+'"]');
+  if(selectedTr){ selectedTr.style.background='rgba(6,95,70,0.1)'; selectedTr.style.fontWeight='700'; }
+
   const s3=document.getElementById('s3');
-  if(s3)s3.style.display='block';
   const res=document.getElementById('sv-result');
+  const isNew = !s3 || s3.style.display==='none';
+  if(isNew){
+    svPmts=[{label:'חתימה',pct:50,months:0},{label:'מסירה',pct:50,months:36}];
+    if(s3)s3.style.display='block';
+    renderSVPmts();
+  }
   if(res)res.style.display='none';
-  renderSVApts(); // highlight
-  renderSVPmts();
   calcFloor();
 }
 
