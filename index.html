@@ -996,7 +996,9 @@ function fmt(n){ return '₪'+Number(n||0).toLocaleString('he-IL',{maximumFracti
 function mr(ann){ return Math.pow(1+ann/100,1/12)-1; }
 function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100)/Math.pow(1+r,p.months),0); }
 function projCfg(projOrId){
-  const p = typeof projOrId === 'string' ? projects.find(x=>x.id===projOrId) : projOrId;
+  // תמיד מחפש מחדש מה-array הנוכחי כדי לקבל נתונים עדכניים
+  const id = typeof projOrId === 'string' ? projOrId : projOrId?.id;
+  const p = id ? projects.find(x=>x.id===id) : projOrId;
   const s = p?.settings || {};
   // ריבית בסיס מהגדרות פרויקט או גלובלי
   const baseRate = s.rate !== null && s.rate !== undefined ? s.rate : cfg.rate;
@@ -1570,6 +1572,9 @@ function buildManager(){
 }
 
 function renderAll(){
+  // רענן references לפרויקטים נבחרים
+  if(calcProj) calcProj = projects.find(p=>p.id===calcProj.id) || calcProj;
+  if(svProj)   svProj   = projects.find(p=>p.id===svProj.id)   || svProj;
   renderDash();
   renderProjects();
   renderDeals();
