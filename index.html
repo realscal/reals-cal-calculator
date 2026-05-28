@@ -2526,14 +2526,22 @@ function getCalcLoan(prefix){
 async function quickUpdateCredit(){
   if(!calcProj) return;
   const newVal = +document.getElementById('calc-credit-now-input')?.value || 0;
+  const ownerId = me.owner_id || me.id;
+  // עדכן ב-memory
   const proj = projects.find(p=>p.id===calcProj.id);
   if(!proj) return;
   proj.creditNow = newVal;
   calcProj = proj;
-  await saveAll();
+  // שמור ישירות ל-Supabase
+  const {error} = await _sb.from('projects')
+    .update({credit_now: newVal})
+    .eq('id', proj.id)
+    .eq('user_id', ownerId);
+  if(error){ toast('שגיאה בשמירה: '+error.message); return; }
+  // רענן תצוגה
   renderCalcProjects();
   runCalc();
-  toast('✅ יתרת הלוואה עודכנה');
+  toast('✅ יתרת הלוואה עודכנה ל-'+fmt(newVal));
 }
 
 function addCalcPmt(){ calcPmts.push({label:'תשלום '+(calcPmts.length+1),pct:0,months:12}); renderCalcPmts(); }
