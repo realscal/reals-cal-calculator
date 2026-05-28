@@ -803,6 +803,22 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
       </div>
     </div>
     <div class="ib ib-b s mb2">אם תשאיר ריק — יירשמו ברירות המחדל הגלובליות</div>
+    <hr>
+    <div class="step-lbl mb2">📈 תמחור דינמי לפי תזרים</div>
+    <div class="ib ib-g s mb3">המחשבון מחשב ריבית אפקטיבית לפי כמה אשראי בנקאי פעיל עכשיו — ככל שמכרת יותר ויתרה ירדה, הריבית יורדת והנחות גדלות</div>
+    <div class="g2 mb3">
+      <div class="fg">
+        <label>מסגרת אשראי מקסימלית (₪)</label>
+        <input id="p-credit-max" type="number" placeholder="43,000,000" style="font-weight:700" oninput="updateDynamicRatePreview()">
+        <div class="hint">סך האשראי שהבנק אישר לפרויקט</div>
+      </div>
+      <div class="fg">
+        <label>יתרת הלוואה עכשיו (₪)</label>
+        <input id="p-credit-now" type="number" placeholder="0" style="font-weight:700;border-color:var(--primary);background:var(--primary-lt)" oninput="updateDynamicRatePreview()">
+        <div class="hint">כמה אשראי מנוצל כרגע — מתעדכן עם כל מכירה</div>
+      </div>
+    </div>
+    <div id="p-dynamic-rate-preview" class="ib ib-o s mb2" style="display:none"></div>
     <div class="modal-ft">
       <button class="btn bn" style="flex:1;padding:11px" onclick="saveProject()">✅ שמור פרויקט</button>
       <button class="btn bgh" onclick="closeOv('ov-project')">ביטול</button>
@@ -980,14 +996,24 @@ function fmt(n){ return '₪'+Number(n||0).toLocaleString('he-IL',{maximumFracti
 function mr(ann){ return Math.pow(1+ann/100,1/12)-1; }
 function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100)/Math.pow(1+r,p.months),0); }
 function projCfg(projOrId){
-  // Returns merged config: project settings override global cfg
   const p = typeof projOrId === 'string' ? projects.find(x=>x.id===projOrId) : projOrId;
   const s = p?.settings || {};
+  // ריבית בסיס מהגדרות פרויקט או גלובלי
+  const baseRate = s.rate !== null && s.rate !== undefined ? s.rate : cfg.rate;
+  // חישוב ריבית אפקטיבית דינמית לפי ניצול אשראי
+  let effectiveRate = baseRate;
+  let creditPct = null;
+  if(p?.creditMax && p.creditMax > 0){
+    creditPct = Math.min((p.creditNow||0) / p.creditMax, 1);
+    effectiveRate = baseRate * creditPct;
+  }
   return {
-    rate:    s.rate    !== null && s.rate    !== undefined ? s.rate    : cfg.rate,
-    premium: s.premium !== null && s.premium !== undefined ? s.premium : cfg.premium,
-    vat:     s.vat     !== null && s.vat     !== undefined ? s.vat     : cfg.vat,
-    target:  s.salesTarget !== null && s.salesTarget !== undefined ? s.salesTarget : cfg.target,
+    rate:       effectiveRate,
+    baseRate,
+    creditPct,
+    premium:    s.premium !== null && s.premium !== undefined ? s.premium : cfg.premium,
+    vat:        s.vat     !== null && s.vat     !== undefined ? s.vat     : cfg.vat,
+    target:     s.salesTarget !== null && s.salesTarget !== undefined ? s.salesTarget : cfg.target,
   };
 }
 function bankFloor(apt){
@@ -1008,7 +1034,7 @@ async function saveAll(){
   await _sb.from('user_config').upsert({user_id:ownerId, config:cfg});
   // Save projects
   if(projects.length){
-    await _sb.from('projects').upsert(projects.map(p=>({id:p.id,user_id:ownerId,name:p.name,loc:p.loc,target:p.target,payments:p.payments||[],assigned_sales:p.assignedSales||[],settings:p.settings||{}})));
+    await _sb.from('projects').upsert(projects.map(p=>({id:p.id,user_id:ownerId,name:p.name,loc:p.loc,target:p.target,payments:p.payments||[],assigned_sales:p.assignedSales||[],settings:p.settings||{},credit_max:p.creditMax||0,credit_now:p.creditNow||0})));
   }
   // Save apartments
   if(apts.length){
@@ -1041,7 +1067,7 @@ async function loadUserData(){
   // Load projects
   const {data:projRows} = await _sb.from('projects').select('*').eq('user_id',ownerId);
   projects = (projRows||[]).map(r=>({
-    id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[], assignedSales:r.assigned_sales||[], settings:r.settings||{}
+    id:r.id, name:r.name, loc:r.loc, target:r.target, payments:r.payments||[], assignedSales:r.assigned_sales||[], settings:r.settings||{}, creditMax:r.credit_max||0, creditNow:r.credit_now||0
   }));
 
   // Load apartments
@@ -1456,7 +1482,7 @@ function buildManager(){
           </div>
           <div id="calc-pmts-list"></div>
           <button class="btn bgh bsm mt2" onclick="addCalcPmt()">+ פעימה</button>
-          <div class="ib ib-o mt3 s">ריבית היוון: <strong id="calc-rate-lbl">${cfg.rate}%</strong> שנתי</div>
+          <div class="ib ib-o mt3 s">ריבית היוון: <strong id="calc-rate-lbl">${cfg.rate}%</strong> שנתי &nbsp;|&nbsp; שלב: <strong id="calc-stage-lbl">—</strong></div>
 
           <hr>
           <!-- הלוואת קבלן -->
@@ -1626,6 +1652,14 @@ function renderProjects(){
         <div class="fc">
           <h3>${p.name}</h3>
           ${p.loc?`<span class="bdg bdg-gr">${p.loc}</span>`:''}
+          ${(()=>{
+            const pc = projCfg(p);
+            if(pc.creditPct===null) return '';
+            const pct = pc.creditPct;
+            const cls = pct>0.7?'bdg-r':pct>0.4?'bdg-o':'bdg-g';
+            const icon = pct>0.7?'🔴':pct>0.4?'🟡':'🟢';
+            return `<span class="bdg ${cls}">${icon} ריבית אפקטיבית: ${pc.rate.toFixed(1)}%</span>`;
+          })()}
           <span class="bdg bdg-b">${projApts.length} דירות</span>
           <span class="bdg bdg-g">${avail} פנויות</span>
           ${reserved?`<span class="bdg bdg-b">${reserved} מוקפאות</span>`:''}
@@ -1687,6 +1721,30 @@ function renderProjects(){
 // ────────────────────────────────────────────
 //  PROJECT MODAL
 // ────────────────────────────────────────────
+function updateDynamicRatePreview(){
+  const max = +document.getElementById('p-credit-max')?.value || 0;
+  const now = +document.getElementById('p-credit-now')?.value || 0;
+  const baseRate = +document.getElementById('p-rate')?.value || cfg.rate;
+  const el = document.getElementById('p-dynamic-rate-preview');
+  if(!el) return;
+  if(!max){ el.style.display='none'; return; }
+  const pct = Math.min(now/max, 1);
+  const effRate = baseRate * pct;
+  const color = pct>0.7 ? 'var(--red)' : pct>0.4 ? 'var(--gold)' : 'var(--green)';
+  el.style.display='block';
+  el.innerHTML = `
+    <strong>ריבית אפקטיבית כרגע:</strong>
+    <span style="color:${color};font-size:1.1rem;font-weight:800">${effRate.toFixed(2)}%</span>
+    <span class="dim"> (${(pct*100).toFixed(0)}% מהמסגרת מנוצל)</span>
+    <br>
+    <span class="dim xs">
+      ${pct===0 ? '✅ אין אשראי — ריבית אפקטיבית 0%' :
+        pct<0.3 ? '🟢 מכירות טובות — יכול לתת הנחות גדולות' :
+        pct<0.6 ? '🟡 ניצול בינוני — הנחות מוגבלות' :
+        '🔴 ניצול גבוה — מינימום הנחות'}
+    </span>`;
+}
+
 function openProjectModal(id){
   editProjId = id;
   const p = id ? projects.find(x=>x.id===id) : null;
@@ -1698,6 +1756,11 @@ function openProjectModal(id){
   document.getElementById('p-premium').value = p?.settings?.premium ?? '';
   document.getElementById('p-vat').value     = p?.settings?.vat ?? '';
   document.getElementById('p-sales-target').value = p?.settings?.salesTarget ?? '';
+  document.getElementById('p-credit-max').value = p?.creditMax || '';
+  document.getElementById('p-credit-now').value = p?.creditNow || '';
+  const previewEl = document.getElementById('p-dynamic-rate-preview');
+  if(previewEl) previewEl.style.display='none';
+  setTimeout(updateDynamicRatePreview, 50);
   openOv('ov-project');
 }
 
@@ -1735,6 +1798,8 @@ async function saveProject(){
     payments: existing?.payments||[],
     assignedSales: existing?.assignedSales||[],
     settings,
+    creditMax: +document.getElementById('p-credit-max')?.value||0,
+    creditNow: +document.getElementById('p-credit-now')?.value||0,
   };
   if(editProjId) projects=projects.map(x=>x.id===editProjId?proj:x);
   else projects.push(proj);
@@ -2177,7 +2242,18 @@ function renderCalcProjects(){
   const grid = document.getElementById('calc-proj-grid');
   if(!grid) return;
   const rl = document.getElementById('calc-rate-lbl');
-  if(rl) rl.textContent = (calcProj ? projCfg(calcProj).rate : cfg.rate) + '%';
+  if(rl) {
+    const pc = calcProj ? projCfg(calcProj) : null;
+    if(pc && pc.creditPct !== null){
+      const pct = (pc.creditPct*100).toFixed(0);
+      const icon = pc.creditPct>0.7?'🔴':pc.creditPct>0.4?'🟡':'🟢';
+      rl.innerHTML = `${pc.rate.toFixed(2)}% ${icon} <span class="dim xs">(${pct}% ניצול אשראי | ריבית בסיס ${pc.baseRate}%)</span>`;
+    } else {
+      rl.textContent = (pc ? pc.rate : cfg.rate) + '%';
+    }
+  }
+  const sl = document.getElementById('calc-stage-lbl');
+  if(sl) sl.style.display='none';
   if(!projects.length){
     grid.innerHTML = '<div class="ib ib-or s">אין פרויקטים — צור פרויקט בלשונית הפרויקטים</div>';
     return;
@@ -2310,6 +2386,55 @@ function renderCalcPmts(){
     </div>`).join('');
   calcPmtTotal();
 }
+// ════════════════════════════════════════════
+//  DYNAMIC STAGES
+// ════════════════════════════════════════════
+const STAGE_DEFAULTS = {
+  open: { rate: 2,  premium: 0,  hint: 'ריבית נמוכה — עיקר המטרה הוא מכירות לליווי בנקאי' },
+  mid:  { rate: 5,  premium: 3,  hint: 'ריבית בינונית — שמירת רווח בזמן הבנייה' },
+  end:  { rate: 7,  premium: 5,  hint: 'ריבית מלאה — כמעט אין אשראי, גובים מחיר מלא' },
+};
+
+let _editingStage = 'open';
+let _stageValues = { open:{}, mid:{}, end:{} };
+
+function saveCurrentStageValues(){
+  const rateEl = document.getElementById('p-stage-rate');
+  const premEl = document.getElementById('p-stage-premium');
+  return {
+    rate:    rateEl?.value !== '' ? +rateEl.value : null,
+    premium: premEl?.value !== '' ? +premEl.value : null,
+  };
+}
+
+function selectStage(stage, btnEl){
+  // שמור ערכי שלב קודם לפני מעבר
+  if(_editingStage) _stageValues[_editingStage] = saveCurrentStageValues();
+  _editingStage = stage;
+  // עדכן כפתורים
+  ['open','mid','end'].forEach(s=>{
+    const b = document.getElementById('stage-btn-'+s);
+    if(!b) return;
+    const isActive = s===stage;
+    const colors   = {open:'rgba(6,95,70,0.08)',  mid:'rgba(245,158,11,0.08)', end:'rgba(185,28,28,0.08)'};
+    const borders  = {open:'rgba(6,95,70,0.3)',    mid:'rgba(245,158,11,0.3)',  end:'rgba(185,28,28,0.3)'};
+    const textColors={open:'#065f46',              mid:'#92400e',               end:'#991b1b'};
+    b.style.background  = isActive ? colors[s]     : 'rgba(255,255,255,0.5)';
+    b.style.borderColor = isActive ? borders[s]    : 'rgba(200,220,210,0.6)';
+    b.style.color       = isActive ? textColors[s] : 'var(--ink3)';
+    b.style.fontWeight  = isActive ? '700' : '600';
+  });
+  // טען ערכים קיימים או ברירת מחדל
+  const saved   = _stageValues[stage] || {};
+  const defaults = STAGE_DEFAULTS[stage];
+  const rateEl  = document.getElementById('p-stage-rate');
+  const premEl  = document.getElementById('p-stage-premium');
+  const hintEl  = document.getElementById('p-stage-hint');
+  if(rateEl) rateEl.value = saved.rate    ?? defaults.rate;
+  if(premEl) premEl.value = saved.premium ?? defaults.premium;
+  if(hintEl) hintEl.textContent = defaults.hint;
+}
+
 function toggleCalcLoan(){
   const on = document.getElementById('calc-loan-toggle')?.checked;
   const fields = document.getElementById('calc-loan-fields');
