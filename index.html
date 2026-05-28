@@ -1485,6 +1485,15 @@ function buildManager(){
           <div id="calc-pmts-list"></div>
           <button class="btn bgh bsm mt2" onclick="addCalcPmt()">+ פעימה</button>
           <div class="ib ib-o mt3 s">ריבית היוון: <strong id="calc-rate-lbl">${cfg.rate}%</strong> שנתי &nbsp;|&nbsp; שלב: <strong id="calc-stage-lbl">—</strong></div>
+          <div id="calc-credit-update" class="mt2" style="display:none">
+            <div class="fc" style="gap:8px;align-items:flex-end">
+              <div class="fg" style="flex:1">
+                <label>עדכן יתרת הלוואה (₪)</label>
+                <input type="number" id="calc-credit-now-input" placeholder="0" style="font-weight:700">
+              </div>
+              <button class="btn bn bsm" onclick="quickUpdateCredit()">עדכן</button>
+            </div>
+          </div>
 
           <hr>
           <!-- הלוואת קבלן -->
@@ -2252,7 +2261,10 @@ function renderCalcProjects(){
     if(pc && pc.creditPct !== null){
       const pct = (pc.creditPct*100).toFixed(0);
       const icon = pc.creditPct>0.7?'🔴':pc.creditPct>0.4?'🟡':'🟢';
-      rl.innerHTML = `${pc.rate.toFixed(2)}% ${icon} <span class="dim xs">(${pct}% ניצול אשראי | ריבית בסיס ${pc.baseRate}%)</span>`;
+      rl.innerHTML = `${pc.rate.toFixed(2)}% ${icon} <span class="dim xs">(${pct}% ניצול | בסיס ${pc.baseRate}%)</span>`;
+    } else if(pc && pc.creditPct === null){
+      // אין מסגרת אשראי — מציג אזהרה
+      rl.innerHTML = `<span class="cred">${pc.rate}% ⚠️</span> <span class="dim xs">לא הוזנה מסגרת אשראי — עדכן בהגדרות הפרויקט</span>`;
     } else {
       rl.textContent = (pc ? pc.rate : cfg.rate) + '%';
     }
@@ -2376,6 +2388,17 @@ function selectCalcApt(id){
         ${calcApt.mkt?'<div style="grid-column:span 2"><span class="dim">מחיר שיווק</span><br><strong class="cg" style="font-size:1.1rem">'+fmt(calcApt.mkt)+'</strong></div>':''}
       </div>`;
   }
+
+  // הצג עדכון יתרה אם יש מסגרת
+  const creditWidget = document.getElementById('calc-credit-update');
+  const creditInput  = document.getElementById('calc-credit-now-input');
+  if(creditWidget && calcProj?.creditMax){
+    creditWidget.style.display = 'block';
+    if(creditInput) creditInput.value = calcProj.creditNow || 0;
+  } else if(creditWidget){
+    creditWidget.style.display = 'none';
+  }
+
   runCalc();
 }
 
@@ -2498,6 +2521,19 @@ function getCalcLoan(prefix){
   const rate   = +document.getElementById(prefix+'-loan-rate')?.value   || 0;
   if(!amt || !months || !rate) return null;
   return { amt, months, rate };
+}
+
+async function quickUpdateCredit(){
+  if(!calcProj) return;
+  const newVal = +document.getElementById('calc-credit-now-input')?.value || 0;
+  const proj = projects.find(p=>p.id===calcProj.id);
+  if(!proj) return;
+  proj.creditNow = newVal;
+  calcProj = proj;
+  await saveAll();
+  renderCalcProjects();
+  runCalc();
+  toast('✅ יתרת הלוואה עודכנה');
 }
 
 function addCalcPmt(){ calcPmts.push({label:'תשלום '+(calcPmts.length+1),pct:0,months:12}); renderCalcPmts(); }
