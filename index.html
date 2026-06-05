@@ -523,7 +523,72 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
 .res-price{font-family:'Playfair Display',serif;font-size:2.4rem;line-height:1;margin:8px 0 4px}
 .res-lbl{font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)}
 
-/* ══ TOAST ══ */
+/* ══ TOOLTIP ══ */
+.tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(30,64,175,0.15);
+  color: var(--blue);
+  font-size: .65rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-right: 4px;
+  position: relative;
+  flex-shrink: 0;
+  transition: .15s;
+  border: 1px solid rgba(30,64,175,0.2);
+}
+.tip:hover { background: rgba(30,64,175,0.25); }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 50%;
+  transform: translateX(50%);
+  background: rgba(13,33,24,0.92);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 9px;
+  white-space: pre-line;
+  min-width: 200px;
+  max-width: 280px;
+  text-align: right;
+  line-height: 1.6;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  border: 1px solid rgba(255,255,255,.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 999;
+}
+.tip:hover::after { opacity: 1; }
+
+/* שדה עם שגיאה */
+.field-error input, .field-error select {
+  border-color: var(--red) !important;
+  background: rgba(185,28,28,0.06) !important;
+  animation: shake .3s ease;
+}
+.field-error .error-msg {
+  display: block !important;
+  color: var(--red);
+  font-size: .7rem;
+  margin-top: 3px;
+  font-weight: 600;
+}
+.error-msg { display: none; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-4px)}
+  75%{transform:translateX(4px)}
+}
 #toast {
   position: fixed;
   bottom: 28px;
@@ -808,12 +873,18 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
     <div class="ib ib-g s mb3">המחשבון מחשב ריבית אפקטיבית לפי כמה אשראי בנקאי פעיל עכשיו — ככל שמכרת יותר ויתרה ירדה, הריבית יורדת והנחות גדלות</div>
     <div class="g2 mb3">
       <div class="fg">
-        <label>מסגרת אשראי מקסימלית (₪)</label>
+        <label style="display:flex;align-items:center;gap:4px">
+          מסגרת אשראי מקסימלית (₪)
+          <span class="tip" data-tip="סך האשראי שהבנק אישר לפרויקט.&#10;לדוגמה: אם הבנק אישר 43 מיליון — הזן 43000000.&#10;משמש לחישוב הריבית האפקטיבית.">?</span>
+        </label>
         <input id="p-credit-max" type="number" placeholder="43,000,000" style="font-weight:700" oninput="updateDynamicRatePreview()">
         <div class="hint">סך האשראי שהבנק אישר לפרויקט</div>
       </div>
       <div class="fg">
-        <label>יתרת הלוואה עכשיו (₪)</label>
+        <label style="display:flex;align-items:center;gap:4px">
+          יתרת הלוואה עכשיו (₪)
+          <span class="tip" data-tip="כמה אשראי בנקאי מנוצל כרגע.&#10;עדכן מספר זה כל כמה זמן לפי דו״ח הבנק.&#10;ככל שהמספר גבוה יותר — פחות הנחות ניתן לתת.&#10;0 = אין ניצול אשראי = הנחות מקסימליות.">?</span>
+        </label>
         <input id="p-credit-now" type="number" placeholder="0" style="font-weight:700;border-color:var(--primary);background:var(--primary-lt)" oninput="updateDynamicRatePreview()">
         <div class="hint">כמה אשראי מנוצל כרגע — מתעדכן עם כל מכירה</div>
       </div>
@@ -837,12 +908,23 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
     <div class="ib ib-b mb3" id="apt-proj-indicator"></div>
 
     <div class="g3 mb3">
-      <div class="fg"><label>מספר דירה *</label><input id="a-num" type="text" placeholder="101" style="font-weight:700;font-size:1.05rem"></div>
+      <div class="fg" id="fg-num">
+        <label>מספר דירה *</label>
+        <input id="a-num" type="text" placeholder="101" style="font-weight:700;font-size:1.05rem" oninput="clearFieldError('fg-num')">
+        <span class="error-msg">שדה חובה</span>
+      </div>
       <div class="fg"><label>קומה</label><input id="a-floor" type="number" placeholder="3"></div>
       <div class="fg"><label>חדרים / טיפוס</label><input id="a-type" type="text" placeholder="4 חד'"></div>
     </div>
     <div class="g2 mb3">
-      <div class="fg"><label>שטח דירה (מ&quot;ר) *</label><input id="a-area" type="number" placeholder="100" oninput="aptPreview()" class="ho" style="font-size:1.05rem"></div>
+      <div class="fg" id="fg-area">
+        <label style="display:flex;align-items:center;gap:4px">
+          שטח דירה (מ"ר) *
+          <span class="tip" data-tip="שטח הדירה בלבד — ללא מרפסת וגינה.&#10;מרפסת וגינה יש שדות נפרדים למטה.">?</span>
+        </label>
+        <input id="a-area" type="number" placeholder="100" oninput="aptPreview();clearFieldError('fg-area')" class="ho" style="font-size:1.05rem">
+        <span class="error-msg">שדה חובה — הזן שטח דירה</span>
+      </div>
       <div class="fg"><label>חניות</label><input id="a-park" type="number" placeholder="1" value="1"></div>
     </div>
     <div class="g2 mb3">
@@ -860,20 +942,29 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
     <hr>
     <div class="step-lbl mb2">💰 נתוני דוח אפס (מהבנק המלווה)</div>
     <div class="g3 mb3">
-      <div class="fg">
-        <label>מחיר דוח אפס למ&quot;ר (₪) *</label>
-        <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview()" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700">
-        <div class="hint">הסכום שבנק נותן לכל מ&quot;ר</div>
+      <div class="fg" id="fg-sqm">
+        <label style="display:flex;align-items:center;gap:4px">
+          מחיר דוח אפס למ"ר (₪) *
+          <span class="tip" data-tip="המחיר שהבנק המלווה קבע לכל מ״ר.&#10;⚠️ חשוב: מחיר זה הוא ללא מע״מ.&#10;לדוגמה: אם הבנק אמר 46,610 ₪/מ״ר — הזן 46,610.&#10;המחשבון יוסיף את המע״מ בעצמו.">?</span>
+        </label>
+        <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview();clearFieldError('fg-sqm')" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700">
+        <span class="error-msg">שדה חובה — הזן מחיר דוח אפס ללא מע"מ</span>
       </div>
       <div class="fg">
-        <label>תוספות דוח אפס — חניה/מחסן/אחר (₪)</label>
+        <label style="display:flex;align-items:center;gap:4px">
+          תוספות דוח אפס (₪)
+          <span class="tip" data-tip="סכומים קבועים שהבנק מוסיף מעבר לחישוב לפי מ״ר.&#10;לדוגמה: חניה, מחסן, קירות מיוחדים.&#10;גם אלה ללא מע״מ.">?</span>
+        </label>
         <input id="a-ext" type="number" placeholder="0" value="0" oninput="aptPreview()">
         <div class="hint">חניה, מחסן, קירות, וכו'</div>
       </div>
-      <div class="fg">
-        <label>מחיר שיווק / מחירון (₪)</label>
-        <input id="a-mkt" type="number" placeholder="3,500,000" oninput="aptPreview()" style="border-color:var(--gold-bd);background:var(--gold-lt);font-weight:700">
-        <div class="hint">ברוטו כולל מע&quot;מ</div>
+      <div class="fg" id="fg-mkt">
+        <label style="display:flex;align-items:center;gap:4px">
+          מחיר שיווק / מחירון (₪)
+          <span class="tip" data-tip="המחיר שמוצג ללקוח בשיווק.&#10;✅ חשוב: מחיר זה הוא כולל מע״מ.&#10;לדוגמה: אם מוכרים ב-8,222,500 ₪ — הזן 8,222,500.&#10;המחשבון ידע שזה כבר כולל מע״מ.">?</span>
+        </label>
+        <input id="a-mkt" type="number" placeholder="3,500,000" oninput="aptPreview();clearFieldError('fg-mkt')" style="border-color:var(--gold-bd);background:var(--gold-lt);font-weight:700">
+        <span class="error-msg">מומלץ להזין מחיר שיווק כדי לראות הנחות</span>
       </div>
     </div>
     <div id="apt-preview" class="ib ib-o" style="display:none;font-size:.8rem;line-height:1.8"></div>
@@ -996,15 +1087,16 @@ function fmt(n){ return '₪'+Number(n||0).toLocaleString('he-IL',{maximumFracti
 function mr(ann){ return Math.pow(1+ann/100,1/12)-1; }
 function npvF(pmts,ann){ const r=mr(ann); return pmts.reduce((a,p)=>a+(p.pct/100)/Math.pow(1+r,p.months),0); }
 function projCfg(projOrId){
-  // תמיד מחפש מחדש מה-array הנוכחי כדי לקבל נתונים עדכניים
   const id = typeof projOrId === 'string' ? projOrId : projOrId?.id;
   const p = id ? projects.find(x=>x.id===id) : projOrId;
   const s = p?.settings || {};
-  // ריבית בסיס מהגדרות פרויקט או גלובלי
+  // ריבית בסיס (ריבית הבנק) — מהגדרות פרויקט או גלובלי
   const baseRate = s.rate !== null && s.rate !== undefined ? s.rate : cfg.rate;
-  // חישוב ריבית אפקטיבית דינמית לפי ניצול אשראי
-  let effectiveRate = baseRate;
-  let creditPct = null;
+  // ריבית אפקטיבית — תמיד לפי ניצול אשראי
+  // אם הוזנה מסגרת: baseRate × (יתרה ÷ מסגרת)
+  // אם לא הוזנה מסגרת: 0% (אין ניצול אשראי = אין עלות)
+  let effectiveRate = 0;
+  let creditPct = 0;
   if(p?.creditMax && p.creditMax > 0){
     creditPct = Math.min((p.creditNow||0) / p.creditMax, 1);
     effectiveRate = baseRate * creditPct;
@@ -1013,6 +1105,7 @@ function projCfg(projOrId){
     rate:       effectiveRate,
     baseRate,
     creditPct,
+    hasCreditData: !!(p?.creditMax && p.creditMax > 0),
     premium:    s.premium !== null && s.premium !== undefined ? s.premium : cfg.premium,
     vat:        s.vat     !== null && s.vat     !== undefined ? s.vat     : cfg.vat,
     target:     s.salesTarget !== null && s.salesTarget !== undefined ? s.salesTarget : cfg.target,
@@ -1891,9 +1984,19 @@ async function saveApt(){
   const num  = document.getElementById('a-num').value.trim();
   const area = +document.getElementById('a-area').value;
   const sqm  = +document.getElementById('a-sqm').value;
-  if(!num)  { toast('חובה: מספר דירה'); return; }
-  if(!area) { toast('חובה: שטח דירה'); return; }
-  if(!sqm)  { toast('חובה: מחיר דוח אפס למ"ר'); return; }
+
+  // Validation עם הדגשה ויזואלית
+  let hasError = false;
+  if(!num){  showFieldError('fg-num');  hasError=true; }
+  if(!area){ showFieldError('fg-area'); hasError=true; }
+  if(!sqm){  showFieldError('fg-sqm');  hasError=true; }
+  if(hasError){
+    toast('⚠️ יש למלא את כל שדות החובה המסומנים');
+    // גלול לשדה הראשון עם שגיאה
+    const firstError = document.querySelector('.field-error input');
+    if(firstError) firstError.focus();
+    return;
+  }
   const apt={
     id:    editAptId||uid(),
     projId: editAptProjId,
@@ -2258,15 +2361,14 @@ function renderCalcProjects(){
   const rl = document.getElementById('calc-rate-lbl');
   if(rl) {
     const pc = calcProj ? projCfg(calcProj) : null;
-    if(pc && pc.creditPct !== null){
+    if(pc && pc.hasCreditData){
       const pct = (pc.creditPct*100).toFixed(0);
       const icon = pc.creditPct>0.7?'🔴':pc.creditPct>0.4?'🟡':'🟢';
       rl.innerHTML = `${pc.rate.toFixed(2)}% ${icon} <span class="dim xs">(${pct}% ניצול | בסיס ${pc.baseRate}%)</span>`;
-    } else if(pc && pc.creditPct === null){
-      // אין מסגרת אשראי — מציג אזהרה
-      rl.innerHTML = `<span class="cred">${pc.rate}% ⚠️</span> <span class="dim xs">לא הוזנה מסגרת אשראי — עדכן בהגדרות הפרויקט</span>`;
+    } else if(pc){
+      rl.innerHTML = `0% 🟢 <span class="dim xs">(אין מסגרת אשראי — הזן מסגרת בהגדרות לתמחור דינמי)</span>`;
     } else {
-      rl.textContent = (pc ? pc.rate : cfg.rate) + '%';
+      rl.textContent = '0%';
     }
   }
   const sl = document.getElementById('calc-stage-lbl');
@@ -2461,6 +2563,21 @@ function selectStage(stage, btnEl){
   if(rateEl) rateEl.value = saved.rate    ?? defaults.rate;
   if(premEl) premEl.value = saved.premium ?? defaults.premium;
   if(hintEl) hintEl.textContent = defaults.hint;
+}
+
+// ════════════════════════════════════════════
+//  FIELD VALIDATION HELPERS
+// ════════════════════════════════════════════
+function showFieldError(fieldId){
+  const el = document.getElementById(fieldId);
+  if(!el) return;
+  el.classList.add('field-error');
+  // הסר שגיאה אחרי 5 שניות
+  setTimeout(()=>el.classList.remove('field-error'), 5000);
+}
+function clearFieldError(fieldId){
+  const el = document.getElementById(fieldId);
+  if(el) el.classList.remove('field-error');
 }
 
 function toggleCalcLoan(){
