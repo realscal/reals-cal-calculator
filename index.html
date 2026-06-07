@@ -1091,36 +1091,37 @@ function projCfg(projOrId){
   const p = id ? projects.find(x=>x.id===id) : projOrId;
   const s = p?.settings || {};
   const baseRate = s.rate !== null && s.rate !== undefined ? s.rate : cfg.rate;
+  const vat      = s.vat  !== null && s.vat  !== undefined ? s.vat  : cfg.vat;
+  const premium  = s.premium !== null && s.premium !== undefined ? s.premium : cfg.premium;
 
-  let effectiveRate = 0;
-  let creditPct = 0;
   let hasCreditData = false;
+  let creditPerApt  = 0;
 
   if(p?.creditMax && p.creditMax > 0){
     hasCreditData = true;
-    // מספר דירות בפרויקט
     const projApts = apts.filter(a=>a.projId===p.id);
-    const numApts = projApts.length || 1;
-    // חוב ממוצע לדירה
-    const creditPerApt = (p.creditNow||0) / numApts;
-    // ערך ממוצע של דירה בפרויקט (נטו ברוטו)
-    const avgAptValue = projApts.length
-      ? projApts.reduce((sum,a)=>sum+bankFloor(a)*(1+(s.premium||cfg.premium)/100)*(1+(s.vat||cfg.vat)/100),0)/projApts.length
-      : p.creditMax/numApts; // fallback אם אין דירות
-    // % של ערך הדירה שממומן בחוב
-    creditPct = avgAptValue > 0 ? Math.min(creditPerApt/avgAptValue, 1) : 0;
-    effectiveRate = baseRate * creditPct;
+    const numApts  = projApts.length || 1;
+    creditPerApt   = (p.creditNow||0) / numApts;
   }
 
   return {
-    rate:         effectiveRate,
+    rate:         baseRate, // ריבית הבנק — לחישוב עלות מימון
     baseRate,
-    creditPct,
+    creditPerApt, // חוב לדירה — לחישוב עלות לפי פריסה
     hasCreditData,
-    premium:  s.premium !== null && s.premium !== undefined ? s.premium : cfg.premium,
-    vat:      s.vat     !== null && s.vat     !== undefined ? s.vat     : cfg.vat,
-    target:   s.salesTarget !== null && s.salesTarget !== undefined ? s.salesTarget : cfg.target,
+    premium,
+    vat,
+    target: s.salesTarget !== null && s.salesTarget !== undefined ? s.salesTarget : cfg.target,
   };
+}
+
+// מחשב עלות מימון לדירה לפי פריסה ספציפית
+// עלות = חוב לדירה × % פעימה × ריבית × שנים דחייה
+function calcFinancingCost(pmts, pc){
+  if(!pc.creditPerApt || !pc.baseRate) return 0;
+  return pmts.reduce((sum, p)=>{
+    return sum + pc.creditPerApt * (p.pct/100) * (pc.baseRate/100) * (p.months/12);
+  }, 0);
 }
 function bankFloor(apt){
   const base=(apt.area||0)*apt.sqm;
@@ -1129,7 +1130,13 @@ function bankFloor(apt){
   return base+balcony+garden+(apt.ext||0);
 }
 function targetNet(apt, pc){ pc=pc||projCfg(apt.projId); return bankFloor(apt)*(1+(pc.premium/100)); }
-function floorGross(apt, pmts, pc){ pc=pc||projCfg(apt.projId); return targetNet(apt,pc)/npvF(pmts,pc.rate)*(1+pc.vat/100); }
+function floorGross(apt, pmts, pc){
+  pc=pc||projCfg(apt.projId);
+  const tN = targetNet(apt,pc);
+  const f  = npvF(pmts, 0); // תמיד 1.0 — עלות מימון נחשבת בנפרד
+  const financingCostNet = calcFinancingCost(pmts, pc)/(1+pc.vat/100);
+  return (tN + financingCostNet)/f*(1+pc.vat/100);
+}
 // ════════════════════════════════════════════
 //  SUPABASE DATA LAYER
 // ════════════════════════════════════════════
@@ -2630,14 +2637,17 @@ function calcLoanNPV(loan, discRate, vat){
   return netReceived / (1+vat/100);
 }
 
-// מחשב רצפת מכירה עם הלוואת קבלן
-function calcFloorWithLoan(tN, f, vat, loan, discRate){
-  if(!loan || !loan.amt || !loan.months || !loan.rate){
-    return tN/f*(1+vat/100);
-  }
-  const loanNPVNet = calcLoanNPV(loan, discRate, vat);
-  // ה-NPV של ההלוואה מקטין את מה שצריך לגבות מהלקוח
-  return ((tN - loanNPVNet) / f) * (1+vat/100);
+// מחשב רצפת מכירה עם הלוואת קבלן ועלות מימון
+function calcFloorWithLoan(tN, pmts, vat, loan, pc){
+  // עלות מימון לפי פריסה ספציפית
+  const financingCostNet = calcFinancingCost(pmts, pc||{}) / (1+vat/100);
+  // בסיס: NPV factor = 1 (עלות מימון כבר בחשבון)
+  const baseFlr = (tN + financingCostNet) * (1+vat/100);
+
+  // הלוואת קבלן — מורידה מהרצפה
+  if(!loan || !loan.amt || !loan.months || !loan.rate) return baseFlr;
+  const loanNPVNet = calcLoanNPV(loan, pc?.baseRate||vat, vat);
+  return (tN + financingCostNet - loanNPVNet) * (1+vat/100);
 }
 
 // קרא נתוני הלוואה מהמחשבון הרלוונטי
@@ -2686,15 +2696,16 @@ function runCalc(){
   if(res) res.style.display='block';
 
   const _pc  = projCfg(calcProj);
-  const r    = mr(_pc.rate);
-  const f    = npvF(calcPmts,_pc.rate);
   const tN   = targetNet(calcApt);
 
   // הלוואת קבלן
   const loan = getCalcLoan('calc');
-  const flrG = calcFloorWithLoan(tN, f, _pc.vat, loan, _pc.rate);
+  const flrG = calcFloorWithLoan(tN, calcPmts, _pc.vat, loan, _pc);
   const minN = flrG/(1+_pc.vat/100);
   const mkt  = calcApt.mkt || 0;
+
+  // NPV Factor לתצוגה בלבד
+  const f    = npvF(calcPmts, 0);
 
   const fp   = document.getElementById('calc-floor-price');
   const dpct = document.getElementById('calc-discount-pct');
@@ -2755,8 +2766,8 @@ function calcCheckOffer(){
   if(!offer || !calcApt){ if(el) el.innerHTML=''; return; }
   const _pc  = projCfg(calcProj);
   const loan = getCalcLoan('calc');
-  const f    = npvF(calcPmts,_pc.rate);
-  const flrG = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan, _pc.rate);
+  // f no longer needed for floor calc
+  const flrG = calcFloorWithLoan(targetNet(calcApt), calcPmts, _pc.vat, loan, _pc);
   const ok   = offer >= flrG;
   const diff = offer - flrG;
   const npvNet = offer/(1+_pc.vat/100)*f;
@@ -2796,8 +2807,8 @@ async function submitDealMgr(offerPrice){
   if(!calcApt || !calcProj || !me) return;
   const _pc     = projCfg(calcProj);
   const loan    = getCalcLoan('calc');
-  const f       = npvF(calcPmts, _pc.rate);
-  const flrG    = calcFloorWithLoan(targetNet(calcApt), f, _pc.vat, loan, _pc.rate);
+  // f no longer needed
+  const flrG    = calcFloorWithLoan(targetNet(calcApt), calcPmts, _pc.vat, loan, _pc);
   const isBelowFloor = offerPrice < flrG;
   const aptInfo = 'דירה ' + calcApt.num + ' — ' + calcProj.name;
   const warnMsg = isBelowFloor
@@ -3108,12 +3119,12 @@ function calcFloor(){
   if(res)res.style.display='block';
 
   const _spc = projCfg(svProj);
-  const f    = npvF(svPmts, _spc.rate);
+  // f no longer needed
 
   // הלוואת קבלן
   const loan = getCalcLoan('sv');
   const tN_sv = targetNet(svApt);
-  const flrG = calcFloorWithLoan(tN_sv, f, _spc.vat, loan, _spc.rate);
+  const flrG = calcFloorWithLoan(tN_sv, svPmts, _spc.vat, loan, _spc);
 
   const mkt = svApt.mkt||0;
   document.getElementById('sv-floor-price').textContent = fmt(flrG);
@@ -3145,8 +3156,8 @@ function checkOffer(){
   if(!offer||!svApt){el.innerHTML='';return;}
   const _spc = projCfg(svProj);
   const loan  = getCalcLoan('sv');
-  const f=npvF(svPmts,_spc.rate);
-  const flrG = calcFloorWithLoan(targetNet(svApt), f, _spc.vat, loan, _spc.rate);
+  // f no longer needed
+  const flrG = calcFloorWithLoan(targetNet(svApt), svPmts, _spc.vat, loan, _spc);
   const ok=offer>=flrG;
 
   const mkt2 = svApt.mkt||0;
@@ -3477,8 +3488,8 @@ async function submitDeal(offerPrice){
 
   const _svpc   = projCfg(svProj);
   const loan_sv = getCalcLoan('sv');
-  const f      = npvF(svPmts, _svpc.rate);
-  const flrG   = calcFloorWithLoan(targetNet(svApt), f, _svpc.vat, loan_sv, _svpc.rate);
+  // f no longer needed
+  const flrG   = calcFloorWithLoan(targetNet(svApt), svPmts, _svpc.vat, loan_sv, _svpc);
   const priceNet = offerPrice/(1+_svpc.vat/100);
   const npvNet   = priceNet*f;
   const tNet     = targetNet(svApt);
