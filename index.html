@@ -879,8 +879,6 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
         </label>
         <input id="p-credit-max" type="number" placeholder="43,000,000" style="font-weight:700" oninput="updateDynamicRatePreview()">
         <div class="hint">סך האשראי שהבנק אישר לפרויקט</div>
-        <input id="p-credit-max" type="number" placeholder="43,000,000" style="font-weight:700" oninput="updateDynamicRatePreview()">
-        <div class="hint">סך האשראי שהבנק אישר לפרויקט</div>
       </div>
       <div class="fg">
         <label style="display:flex;align-items:center;gap:4px">
@@ -889,8 +887,6 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
         </label>
         <input id="p-credit-now" type="number" placeholder="0" style="font-weight:700;border-color:var(--primary);background:var(--primary-lt)" oninput="updateDynamicRatePreview()">
         <div class="hint">עדכן לפי דו"ח הבנק — כמה משכת עד היום</div>
-        <input id="p-credit-now" type="number" placeholder="0" style="font-weight:700;border-color:var(--primary);background:var(--primary-lt)" oninput="updateDynamicRatePreview()">
-        <div class="hint">כמה אשראי מנוצל כרגע — מתעדכן עם כל מכירה</div>
       </div>
     </div>
     <div id="p-dynamic-rate-preview" class="ib ib-o s mb2" style="display:none"></div>
@@ -3783,11 +3779,24 @@ function startRealtime(){
       projects = (data||[]).map(r=>({
         id:r.id, name:r.name, loc:r.loc, target:r.target,
         payments:r.payments||[], assignedSales:r.assigned_sales||[],
-        settings:r.settings||{}
+        settings:r.settings||{},
+        creditMax:r.credit_max||0, creditNow:r.credit_now||0,
       }));
+      // רענן references לפרויקטים פתוחים
+      if(calcProj) calcProj = projects.find(p=>p.id===calcProj.id) || calcProj;
+      if(svProj)   svProj   = projects.find(p=>p.id===svProj.id)   || svProj;
+      // עדכן תצוגות
       renderProjects(); renderDash();
-      if(me.role==='sales') renderSVProjects();
-      toast('🔄 פרויקטים עודכנו');
+      if(me.role==='sales'){
+        renderSVProjects();
+        // רענן מחשבון איש מכירות אם פרויקט פתוח
+        if(svProj && svApt) calcFloor();
+      } else {
+        // רענן מחשבון מנהל אם פרויקט פתוח
+        renderCalcProjects();
+        if(calcProj && calcApt) runCalc();
+      }
+      toast('🔄 נתוני פרויקט עודכנו');
     })
 
     // Apartments changes
