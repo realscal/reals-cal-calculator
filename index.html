@@ -1114,7 +1114,10 @@ function projCfg(projOrId){
   if(p?.creditMax && p.creditMax > 0){
     hasCreditData = true;
     const projApts = apts.filter(a=>a.projId===p.id);
-    const numApts  = projApts.length || 1;
+    // חלק רק לפי דירות שעדיין לא שילמו (פנויות + מוקפאות)
+    // דירות נמכרות כבר שחררו את האשראי שלהן
+    const remainingApts = projApts.filter(a=>!a.sold);
+    const numApts  = remainingApts.length || projApts.length || 1;
     creditPerApt   = (p.creditNow||0) / numApts;
   }
 
