@@ -913,6 +913,13 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
         <input id="a-num" type="text" placeholder="101" style="font-weight:700;font-size:1.05rem" oninput="clearFieldError('fg-num')">
         <span class="error-msg">שדה חובה</span>
       </div>
+      <div class="fg">
+        <label style="display:flex;align-items:center;gap:4px">
+          בניין
+          <span class="tip" data-tip="מספר או אות של הבניין בפרויקט.&#10;לדוגמה: 1, 2, א, ב.&#10;ישמש לסינון ומיון הדירות.">?</span>
+        </label>
+        <input id="a-building" type="text" placeholder="א / 1" style="font-weight:700">
+      </div>
       <div class="fg"><label>קומה</label><input id="a-floor" type="number" placeholder="3"></div>
       <div class="fg"><label>חדרים / טיפוס</label><input id="a-type" type="text" placeholder="4 חד'"></div>
     </div>
@@ -1153,7 +1160,7 @@ async function saveAll(){
   if(apts.length){
     await _sb.from('apartments').upsert(apts.map(a=>({
       id:a.id, user_id:ownerId, proj_id:a.projId,
-      num:a.num, floor:a.floor, type:a.type,
+      num:a.num, building:a.building||'', floor:a.floor, type:a.type,
       area:a.area, park:a.park, sqm:a.sqm,
       balcony:a.balcony||0, garden:a.garden||0,
       ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false, reserved:a.reserved||false
@@ -1186,7 +1193,7 @@ async function loadUserData(){
   // Load apartments
   const {data:aptRows} = await _sb.from('apartments').select('*').eq('user_id',ownerId);
   apts = (aptRows||[]).map(r=>({
-    id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
+    id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', floor:r.floor,
     type:r.type, area:r.area, park:r.park, sqm:r.sqm,
     balcony:r.balcony||0, garden:r.garden||0,
     ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
@@ -1794,7 +1801,7 @@ function renderProjects(){
       <div class="tbl-wrap">
         <table>
           <thead><tr>
-            <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח מ"ר</th><th>מרפסת</th><th>גינה</th>
+            <th>דירה</th><th>בניין</th><th>קומה</th><th>חדרים</th><th>שטח מ"ר</th><th>מרפסת</th><th>גינה</th>
             <th>דוח אפס נטו</th><th>יעד נטו (+${projCfg(p).premium}%)</th>
             <th>רצפה ברוטו <span class="vat">+מע"מ</span></th>
             <th>מחירון</th><th>מרווח</th><th>סטטוס</th><th></th>
@@ -1808,6 +1815,7 @@ function renderProjects(){
             const buf = a.mkt ? a.mkt-flr : 0;
             return `<tr>
               <td class="bold">${a.num}</td>
+              <td>${a.building||'—'}</td>
               <td>${a.floor}</td>
               <td>${a.type||'—'}</td>
               <td>${a.area}</td>
@@ -1945,8 +1953,9 @@ function openAptModal(projId, aptId){
   const p = projects.find(x=>x.id===projId);
   document.getElementById('apt-modal-title').textContent = aptId ? 'עריכת דירה' : 'הוספת דירה לפרויקט';
   document.getElementById('apt-proj-indicator').textContent = p ? 'פרויקט: ' + p.name : '';
-  document.getElementById('a-num').value   = a?.num||'';
-  document.getElementById('a-floor').value = a?.floor||'';
+  document.getElementById('a-num').value      = a?.num||'';
+  document.getElementById('a-building').value = a?.building||'';
+  document.getElementById('a-floor').value    = a?.floor||'';
   document.getElementById('a-type').value  = a?.type||"4 חד'";
   document.getElementById('a-area').value  = a?.area||'';
   document.getElementById('a-park').value  = a?.park||1;
@@ -2010,6 +2019,7 @@ async function saveApt(){
     id:    editAptId||uid(),
     projId: editAptProjId,
     num,
+    building: document.getElementById('a-building').value.trim()||'',
     floor: +document.getElementById('a-floor').value||0,
     type:   document.getElementById('a-type').value,
     area,
@@ -2429,13 +2439,14 @@ function renderCalcApts(){
   grid.innerHTML = `<div class="tbl-wrap">
     <table>
       <thead><tr>
-        <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th><th>דוח אפס</th>
+        <th>דירה</th><th>בניין</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th><th>דוח אפס</th>
       </tr></thead>
       <tbody>${avail.map(a=>{
         const sel = calcApt?.id === a.id;
         const bf  = bankFloor(a);
         return `<tr data-id="${a.id}" onclick="selectCalcApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
           <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
+          <td class="dim xs">${a.building||'—'}</td>
           <td>${a.floor}</td>
           <td>${a.type||'—'}</td>
           <td>${a.area} מ"ר</td>
@@ -3042,12 +3053,13 @@ function renderSVApts(){
   grid.innerHTML = `<div class="tbl-wrap">
     <table>
       <thead><tr>
-        <th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th>
+        <th>דירה</th><th>בניין</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th>מחירון</th>
       </tr></thead>
       <tbody>${avail.map(a=>{
         const sel = svApt?.id === a.id;
         return `<tr data-id="${a.id}" onclick="selectApt('${a.id}')" style="cursor:pointer;${sel?'background:rgba(6,95,70,0.1);font-weight:700;':''}">
           <td><strong style="font-size:1rem">דירה ${a.num}</strong></td>
+          <td class="dim xs">${a.building||'—'}</td>
           <td>${a.floor}</td>
           <td>${a.type||'—'}</td>
           <td>${a.area} מ"ר</td>
@@ -3806,7 +3818,7 @@ function startRealtime(){
     }, async () => {
       const {data} = await _sb.from('apartments').select('*').eq('user_id', ownerId);
       apts = (data||[]).map(r=>({
-        id:r.id, projId:r.proj_id, num:r.num, floor:r.floor,
+        id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', floor:r.floor,
         type:r.type, area:r.area, park:r.park, sqm:r.sqm,
         balcony:r.balcony||0, garden:r.garden||0,
         ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
