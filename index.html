@@ -916,12 +916,19 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
       <div class="fg">
         <label style="display:flex;align-items:center;gap:4px">
           בניין
-          <span class="tip" data-tip="מספר או אות של הבניין בפרויקט.&#10;לדוגמה: 1, 2, א, ב.&#10;ישמש לסינון ומיון הדירות.">?</span>
+          <span class="tip" data-tip="מספר או אות של הבניין בפרויקט.&#10;לדוגמה: 1, 2, א, ב.">?</span>
         </label>
         <input id="a-building" type="text" placeholder="א / 1" style="font-weight:700">
       </div>
       <div class="fg"><label>קומה</label><input id="a-floor" type="number" placeholder="3"></div>
       <div class="fg"><label>חדרים / טיפוס</label><input id="a-type" type="text" placeholder="4 חד'"></div>
+      <div class="fg">
+        <label style="display:flex;align-items:center;gap:4px">
+          כיווני אוויר
+          <span class="tip" data-tip="כיוון הדירה.&#10;לדוגמה: מזרח, מערב, צפון, דרום.&#10;ניתן לרשום כמה כיוונים: מזרח-דרום.">?</span>
+        </label>
+        <input id="a-orientation" type="text" placeholder="מזרח / מערב-צפון">
+      </div>
     </div>
     <div class="g2 mb3">
       <div class="fg" id="fg-area">
@@ -1160,7 +1167,7 @@ async function saveAll(){
   if(apts.length){
     await _sb.from('apartments').upsert(apts.map(a=>({
       id:a.id, user_id:ownerId, proj_id:a.projId,
-      num:a.num, building:a.building||'', floor:a.floor, type:a.type,
+      num:a.num, building:a.building||'', orientation:a.orientation||'', floor:a.floor, type:a.type,
       area:a.area, park:a.park, sqm:a.sqm,
       balcony:a.balcony||0, garden:a.garden||0,
       ext:a.ext||0, mkt:a.mkt||0, sold:a.sold||false, reserved:a.reserved||false
@@ -1193,7 +1200,7 @@ async function loadUserData(){
   // Load apartments
   const {data:aptRows} = await _sb.from('apartments').select('*').eq('user_id',ownerId);
   apts = (aptRows||[]).map(r=>({
-    id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', floor:r.floor,
+    id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', orientation:r.orientation||'', floor:r.floor,
     type:r.type, area:r.area, park:r.park, sqm:r.sqm,
     balcony:r.balcony||0, garden:r.garden||0,
     ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
@@ -1953,10 +1960,11 @@ function openAptModal(projId, aptId){
   const p = projects.find(x=>x.id===projId);
   document.getElementById('apt-modal-title').textContent = aptId ? 'עריכת דירה' : 'הוספת דירה לפרויקט';
   document.getElementById('apt-proj-indicator').textContent = p ? 'פרויקט: ' + p.name : '';
-  document.getElementById('a-num').value      = a?.num||'';
-  document.getElementById('a-building').value = a?.building||'';
-  document.getElementById('a-floor').value    = a?.floor||'';
-  document.getElementById('a-type').value  = a?.type||"4 חד'";
+  document.getElementById('a-num').value         = a?.num||'';
+  document.getElementById('a-building').value    = a?.building||'';
+  document.getElementById('a-floor').value       = a?.floor||'';
+  document.getElementById('a-type').value        = a?.type||"4 חד'";
+  document.getElementById('a-orientation').value = a?.orientation||'';
   document.getElementById('a-area').value  = a?.area||'';
   document.getElementById('a-park').value  = a?.park||1;
   document.getElementById('a-balcony').value = a?.balcony||0;
@@ -2020,6 +2028,7 @@ async function saveApt(){
     projId: editAptProjId,
     num,
     building: document.getElementById('a-building').value.trim()||'',
+    orientation: document.getElementById('a-orientation').value.trim()||'',
     floor: +document.getElementById('a-floor').value||0,
     type:   document.getElementById('a-type').value,
     area,
@@ -2342,19 +2351,40 @@ async function saveCfg(){
 function openPricelist(projId){
   const p=projects.find(x=>x.id===projId);
   if(!p) return;
-  const projApts=apts.filter(a=>a.projId===projId).sort((a,b)=>a.floor-b.floor);
-  const f=npvF(p.payments,projCfg(p).rate);
+  const projApts=apts.filter(a=>a.projId===projId).sort((a,b)=>{
+    // מיין לפי בניין ואז קומה ואז מספר דירה
+    if(a.building!==b.building) return String(a.building).localeCompare(String(b.building));
+    return (+a.floor)-(+b.floor) || String(a.num).localeCompare(String(b.num));
+  });
   document.getElementById('pricelist-body').innerHTML=`
     <div style="text-align:center;padding:16px 0 20px;border-bottom:2px solid var(--border)">
       <div style="font-family:'Playfair Display',serif;font-size:1.8rem">${p.name}</div>
       ${p.loc?`<div class="dim s mt1">${p.loc}</div>`:''}
-      <div class="dim xs mt2">${new Date().toLocaleDateString('he-IL')} | NPV Factor: ${f.toFixed(4)}</div>
+      <div class="dim xs mt2">${new Date().toLocaleDateString('he-IL')}</div>
     </div>
     <div class="tbl-wrap mt3"><table>
-      <thead><tr><th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח מ"ר</th><th>מרפסת</th><th>גינה</th><th>חניות</th><th style="color:var(--gold)">מחיר שיווק</th></tr></thead>
+      <thead><tr>
+        <th>דירה</th>
+        <th>בניין</th>
+        <th>קומה</th>
+        <th>חדרים</th>
+        <th>שטח מ"ר</th>
+        <th>מרפסת</th>
+        <th>גינה</th>
+        <th>חניות</th>
+        <th>כיווני אוויר</th>
+        <th style="color:var(--gold)">מחיר שיווק</th>
+      </tr></thead>
       <tbody>${projApts.map(a=>`<tr>
-        <td class="bold">${a.num}</td><td>${a.floor}</td><td>${a.type||'—'}</td><td>${a.area}</td>
-        <td>${a.balcony?a.balcony+' מ"ר':'—'}</td><td>${a.garden?a.garden+' מ"ר':'—'}</td><td>${a.park}</td>
+        <td class="bold">${a.num}</td>
+        <td>${a.building||'—'}</td>
+        <td>${a.floor}</td>
+        <td>${a.type||'—'}</td>
+        <td>${a.area} מ"ר</td>
+        <td>${a.balcony?a.balcony+' מ"ר':'—'}</td>
+        <td>${a.garden?a.garden+' מ"ר':'—'}</td>
+        <td>${a.park||'—'}</td>
+        <td>${a.orientation||'—'}</td>
         <td class="bold corange" style="font-size:1.05rem">${a.mkt?fmt(a.mkt):'—'}</td>
       </tr>`).join('')}</tbody>
     </table></div>
@@ -3818,7 +3848,7 @@ function startRealtime(){
     }, async () => {
       const {data} = await _sb.from('apartments').select('*').eq('user_id', ownerId);
       apts = (data||[]).map(r=>({
-        id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', floor:r.floor,
+        id:r.id, projId:r.proj_id, num:r.num, building:r.building||'', orientation:r.orientation||'', floor:r.floor,
         type:r.type, area:r.area, park:r.park, sqm:r.sqm,
         balcony:r.balcony||0, garden:r.garden||0,
         ext:r.ext, mkt:r.mkt, sold:r.sold, reserved:r.reserved||false
