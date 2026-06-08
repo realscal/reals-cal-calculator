@@ -1814,32 +1814,73 @@ function renderProjects(){
             <th>מחירון</th><th>מרווח</th><th>סטטוס</th><th></th>
           </tr></thead>
           <tbody>
-          ${projApts.map(a=>{
-            const pc  = projCfg(p);
-            const bf  = bankFloor(a);
-            const tN  = targetNet(a, pc);
-            const flr = floorGross(a, p.payments, pc);
-            const buf = a.mkt ? a.mkt-flr : 0;
-            return `<tr>
-              <td class="bold">${a.num}</td>
-              <td>${a.building||'—'}</td>
-              <td>${a.floor}</td>
-              <td>${a.type||'—'}</td>
-              <td>${a.area}</td>
-              <td>${a.balcony?a.balcony+' מ"ר':'—'}</td>
-              <td>${a.garden?a.garden+' מ"ר':'—'}</td>
-              <td>${fmt(bf)}</td>
-              <td class="corange bold">${fmt(tN)}</td>
-              <td class="cred bold">${fmt(flr)}</td>
-              <td class="bold">${a.mkt?fmt(a.mkt):'—'}</td>
-              <td>${a.mkt?`<span class="bdg ${buf>=0?'bdg-g':'bdg-r'}">${fmt(buf)}</span>`:'—'}</td>
-              <td><span class="bdg ${a.sold?'bdg-or':a.reserved?'bdg-b':'bdg-g'}">${a.sold?'✅ נמכרה':a.reserved?'🟡 מוקפאת':'🟢 פנויה'}</span></td>
-              <td class="fc">
-                <button class="bic" onclick="openAptModal('${p.id}','${a.id}')">✏️</button>
-                <button class="bic" onclick="delApt('${a.id}')">🗑</button>
-              </td>
-            </tr>`;
-          }).join('')}
+          ${(()=>{
+            // מיין לפי בניין → קומה → מספר דירה
+            const sorted = [...projApts].sort((a,b)=>{
+              const ba = a.building||'', bb = b.building||'';
+              if(ba!==bb) return ba.localeCompare(bb,'he');
+              return (+a.floor)-(+b.floor) || String(a.num).localeCompare(String(b.num),'he');
+            });
+            // צבעים לבניינים
+            const buildingColors = ['rgba(6,95,70,0.06)','rgba(30,64,175,0.06)','rgba(154,74,7,0.06)','rgba(109,40,217,0.06)','rgba(185,28,28,0.06)'];
+            const buildings = [...new Set(sorted.map(a=>a.building||''))];
+            const buildingColorMap = {};
+            buildings.forEach((b,i)=>{ buildingColorMap[b]=buildingColors[i%buildingColors.length]; });
+            const buildingBorderMap = {
+              'rgba(6,95,70,0.06)':'rgba(6,95,70,0.3)',
+              'rgba(30,64,175,0.06)':'rgba(30,64,175,0.3)',
+              'rgba(154,74,7,0.06)':'rgba(154,74,7,0.3)',
+              'rgba(109,40,217,0.06)':'rgba(109,40,217,0.3)',
+              'rgba(185,28,28,0.06)':'rgba(185,28,28,0.3)',
+            };
+
+            let lastBuilding = null;
+            return sorted.map(a=>{
+              const pc  = projCfg(p);
+              const bf  = bankFloor(a);
+              const tN  = targetNet(a, pc);
+              const flr = floorGross(a, p.payments, pc);
+              const buf = a.mkt ? a.mkt-flr : 0;
+              const bldg = a.building||'';
+              const bgColor = buildingColorMap[bldg]||'';
+              const borderColor = buildingBorderMap[bgColor]||'';
+
+              let separator = '';
+              if(buildings.length > 1 && bldg !== lastBuilding && lastBuilding !== null){
+                separator = `<tr><td colspan="14" style="padding:0;border-bottom:2px solid ${borderColor||'var(--border)'}"></td></tr>`;
+              }
+              // כותרת בניין — רק בפעם הראשונה שמופיע
+              let buildingHeader = '';
+              if(buildings.length > 1 && bldg !== lastBuilding){
+                buildingHeader = `<tr style="background:${bgColor}">
+                  <td colspan="14" style="padding:7px 12px;font-weight:800;font-size:.78rem;color:${borderColor.replace('0.3','0.8)')||'var(--ink2)'};border-bottom:1px solid ${borderColor||'var(--border)'}">
+                    🏗️ בניין ${bldg||'ללא בניין'} — ${sorted.filter(x=>(x.building||'')=== bldg).length} דירות
+                  </td>
+                </tr>`;
+              }
+              lastBuilding = bldg;
+
+              return buildingHeader + `<tr style="background:${bgColor}">
+                <td class="bold">${a.num}</td>
+                <td class="dim xs">${a.building||'—'}</td>
+                <td>${a.floor}</td>
+                <td>${a.type||'—'}</td>
+                <td>${a.area}</td>
+                <td>${a.balcony?a.balcony+' מ"ר':'—'}</td>
+                <td>${a.garden?a.garden+' מ"ר':'—'}</td>
+                <td>${fmt(bf)}</td>
+                <td class="corange bold">${fmt(tN)}</td>
+                <td class="cred bold">${fmt(flr)}</td>
+                <td class="bold">${a.mkt?fmt(a.mkt):'—'}</td>
+                <td>${a.mkt?`<span class="bdg ${buf>=0?'bdg-g':'bdg-r'}">${fmt(buf)}</span>`:'—'}</td>
+                <td><span class="bdg ${a.sold?'bdg-or':a.reserved?'bdg-b':'bdg-g'}">${a.sold?'✅ נמכרה':a.reserved?'🟡 מוקפאת':'🟢 פנויה'}</span></td>
+                <td class="fc">
+                  <button class="bic" onclick="openAptModal('${p.id}','${a.id}')">✏️</button>
+                  <button class="bic" onclick="delApt('${a.id}')">🗑</button>
+                </td>
+              </tr>`;
+            }).join('');
+          })()}
           </tbody>
         </table>
       </div>` : `<div class="ib ib-or s mt2">אין דירות בפרויקט — לחץ "הוסף דירה" להתחיל</div>`}
