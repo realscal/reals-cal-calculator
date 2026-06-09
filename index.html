@@ -1819,11 +1819,11 @@ function renderProjects(){
           <tbody>
           ${(()=>{
             // מיין לפי בניין → קומה → מספר דירה
-            const sorted = [...projApts].sort((a,b)=>{
-              const ba = a.building||'', bb = b.building||'';
-              if(ba!==bb) return ba.localeCompare(bb,'he');
-              return (+a.floor)-(+b.floor) || String(a.num).localeCompare(String(b.num),'he');
-            });
+            const sorted = [...projApts].sort(aptSort);
+
+
+
+
             // צבעים לבניינים
             const buildingColors = ['rgba(6,95,70,0.06)','rgba(30,64,175,0.06)','rgba(154,74,7,0.06)','rgba(109,40,217,0.06)','rgba(185,28,28,0.06)'];
             const buildings = [...new Set(sorted.map(a=>a.building||''))];
@@ -2395,11 +2395,7 @@ async function saveCfg(){
 function openPricelist(projId){
   const p=projects.find(x=>x.id===projId);
   if(!p) return;
-  const projApts=apts.filter(a=>a.projId===projId).sort((a,b)=>{
-    // מיין לפי בניין ואז קומה ואז מספר דירה
-    if(a.building!==b.building) return String(a.building).localeCompare(String(b.building));
-    return (+a.floor)-(+b.floor) || String(a.num).localeCompare(String(b.num));
-  });
+  const projApts=apts.filter(a=>a.projId===projId).sort(aptSort);
   document.getElementById('pricelist-body').innerHTML=`
     <div style="text-align:center;padding:16px 0 20px;border-bottom:2px solid var(--border)">
       <div style="font-family:'Playfair Display',serif;font-size:1.8rem">${p.name}</div>
@@ -2504,7 +2500,7 @@ function renderCalcApts(){
   const grid = document.getElementById('calc-apt-grid');
   if(!grid || !calcProj) return;
   const avail = apts.filter(a=>a.projId===calcProj.id && !a.sold && !a.reserved)
-    .sort((a,b)=> +a.floor - +b.floor || +a.num - +b.num || String(a.num).localeCompare(String(b.num)));
+    .sort(aptSort);
   if(!avail.length){
     grid.innerHTML = '<div class="ib ib-or s">אין דירות פנויות בפרויקט</div>';
     return;
@@ -2659,8 +2655,19 @@ function selectStage(stage, btnEl){
   if(hintEl) hintEl.textContent = defaults.hint;
 }
 
-// ════════════════════════════════════════════
-//  FIELD VALIDATION HELPERS
+// מיון חכם — מטפל במספרים ובאותיות (1,2,9,10,11 ולא 1,10,11,2,9)
+function smartSort(a, b){
+  const na = parseInt(a), nb = parseInt(b);
+  if(!isNaN(na) && !isNaN(nb)) return na - nb;
+  return String(a).localeCompare(String(b), 'he');
+}
+function aptSort(a, b){
+  const ba = a.building||'', bb = b.building||'';
+  if(ba !== bb) return smartSort(ba, bb);
+  const floorDiff = (+a.floor) - (+b.floor);
+  if(floorDiff !== 0) return floorDiff;
+  return smartSort(a.num, b.num);
+}
 // ════════════════════════════════════════════
 function showFieldError(fieldId){
   const el = document.getElementById(fieldId);
@@ -3121,7 +3128,7 @@ function renderSVApts(){
   const noA=document.getElementById('sv-no-apt');
   if(!grid||!svProj) return;
   const avail=apts.filter(a=>a.projId===svProj.id&&!a.sold&&!a.reserved)
-    .sort((a,b)=> +a.floor - +b.floor || +a.num - +b.num || String(a.num).localeCompare(String(b.num)));
+    .sort(aptSort);
   if(!avail.length){grid.innerHTML='';if(noA)noA.style.display='block';return;}
   if(noA)noA.style.display='none';
   grid.innerHTML = `<div class="tbl-wrap">
