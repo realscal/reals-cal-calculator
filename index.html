@@ -959,10 +959,22 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
       <div class="fg" id="fg-sqm">
         <label style="display:flex;align-items:center;gap:4px">
           מחיר דוח אפס למ"ר (₪) *
-          <span class="tip" data-tip="המחיר שהבנק המלווה קבע לכל מ״ר.&#10;⚠️ חשוב: מחיר זה הוא ללא מע״מ.&#10;לדוגמה: אם הבנק אמר 46,610 ₪/מ״ר — הזן 46,610.&#10;המחשבון יוסיף את המע״מ בעצמו.">?</span>
+          <span class="tip" data-tip="המחיר שהבנק קבע לכל מ״ר.&#10;בחר אם המחיר כולל או ללא מע״מ — המחשבון יתאים אוטומטית.">?</span>
         </label>
+        <!-- Toggle כולל/ללא מע"מ -->
+        <div style="display:flex;gap:0;margin-bottom:5px;border:1px solid var(--border);border-radius:7px;overflow:hidden;width:fit-content">
+          <button type="button" id="sqm-vat-no" onclick="setSqmVat(false)"
+            style="padding:4px 12px;border:none;font-family:'Heebo',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:.15s">
+            ללא מע"מ
+          </button>
+          <button type="button" id="sqm-vat-yes" onclick="setSqmVat(true)"
+            style="padding:4px 12px;border:none;font-family:'Heebo',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;background:#f0f5f2;color:var(--ink3);transition:.15s">
+            כולל מע"מ
+          </button>
+        </div>
         <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview();clearFieldError('fg-sqm')" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700">
-        <span class="error-msg">שדה חובה — הזן מחיר דוח אפס ללא מע"מ</span>
+        <div class="hint" id="sqm-hint">מזין ללא מע"מ — המחשבון מוסיף מע"מ בעצמו</div>
+        <span class="error-msg">שדה חובה — הזן מחיר דוח אפס</span>
       </div>
       <div class="fg">
         <label style="display:flex;align-items:center;gap:4px">
@@ -2018,11 +2030,14 @@ function openAptModal(projId, aptId){
   document.getElementById('a-ext').value   = a?.ext||0;
   document.getElementById('a-mkt').value   = a?.mkt||'';
   document.getElementById('apt-preview').style.display='none';
+  // אפס toggle מע"מ
+  _sqmIncludesVat = false;
+  setSqmVat(false);
   openOv('ov-apt');
 }
 function aptPreview(){
   const area=+document.getElementById('a-area').value;
-  const sqm =+document.getElementById('a-sqm').value;
+  const sqm = getSqmNet();
   const ext =+document.getElementById('a-ext').value||0;
   const mkt =+document.getElementById('a-mkt').value;
   const balcony=+document.getElementById('a-balcony').value||0;
@@ -2054,7 +2069,7 @@ function aptPreview(){
 async function saveApt(){
   const num  = document.getElementById('a-num').value.trim();
   const area = +document.getElementById('a-area').value;
-  const sqm  = +document.getElementById('a-sqm').value;
+  const sqm  = getSqmNet(); // תמיד שומר ללא מע"מ
 
   // Validation עם הדגשה ויזואלית
   let hasError = false;
@@ -2682,12 +2697,41 @@ function clearFieldError(fieldId){
   if(el) el.classList.remove('field-error');
 }
 
+// Toggle מע"מ בדוח אפס
+let _sqmIncludesVat = false;
+
+function setSqmVat(includesVat){
+  _sqmIncludesVat = includesVat;
+  const btnNo  = document.getElementById('sqm-vat-no');
+  const btnYes = document.getElementById('sqm-vat-yes');
+  const hint   = document.getElementById('sqm-hint');
+  if(btnNo){
+    btnNo.style.background  = includesVat ? '#f0f5f2' : 'var(--primary)';
+    btnNo.style.color       = includesVat ? 'var(--ink3)' : '#fff';
+  }
+  if(btnYes){
+    btnYes.style.background = includesVat ? 'var(--primary)' : '#f0f5f2';
+    btnYes.style.color      = includesVat ? '#fff' : 'var(--ink3)';
+  }
+  if(hint){
+    hint.textContent = includesVat
+      ? 'מזין כולל מע"מ — המחשבון יחלק ב-1.18 אוטומטית'
+      : 'מזין ללא מע"מ — המחשבון מוסיף מע"מ בעצמו';
+  }
+  aptPreview();
+}
+
+function getSqmNet(){
+  const raw = +document.getElementById('a-sqm')?.value || 0;
+  const vat = +document.getElementById('c-vat')?.value || cfg.vat || 18;
+  return _sqmIncludesVat ? raw/(1+vat/100) : raw;
+}
+
 function toggleCalcLoan(){
   const on = document.getElementById('calc-loan-toggle')?.checked;
   const fields = document.getElementById('calc-loan-fields');
   if(fields) fields.style.display = on ? 'block' : 'none';
   if(!on){
-    // clear fields
     ['calc-loan-amt','calc-loan-months','calc-loan-rate'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value='';
     });
