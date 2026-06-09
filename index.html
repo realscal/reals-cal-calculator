@@ -955,7 +955,8 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
     </div>
     <hr>
     <div class="step-lbl mb2">💰 נתוני דוח אפס (מהבנק המלווה)</div>
-    <div class="g3 mb3">
+    <!-- שדה דוח אפס — רוחב מלא עם toggle מע"מ -->
+    <div class="mb3">
       <div class="fg" id="fg-sqm">
         <label style="display:flex;align-items:center;gap:4px">
           מחיר דוח אפס למ"ר (₪) *
@@ -964,18 +965,20 @@ hr{border:none;border-top:1px solid rgba(6,95,70,0.08);margin:14px 0}
         <!-- Toggle כולל/ללא מע"מ -->
         <div style="display:flex;gap:0;margin-bottom:5px;border:1px solid var(--border);border-radius:7px;overflow:hidden;width:fit-content">
           <button type="button" id="sqm-vat-no" onclick="setSqmVat(false)"
-            style="padding:4px 12px;border:none;font-family:'Heebo',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:.15s">
+            style="padding:5px 16px;border:none;font-family:'Heebo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:.15s">
             ללא מע"מ
           </button>
           <button type="button" id="sqm-vat-yes" onclick="setSqmVat(true)"
-            style="padding:4px 12px;border:none;font-family:'Heebo',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;background:#f0f5f2;color:var(--ink3);transition:.15s">
+            style="padding:5px 16px;border:none;font-family:'Heebo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;background:#f0f5f2;color:var(--ink3);transition:.15s">
             כולל מע"מ
           </button>
         </div>
-        <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview();clearFieldError('fg-sqm')" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700">
+        <input id="a-sqm" type="number" placeholder="25,000" oninput="aptPreview();clearFieldError('fg-sqm')" style="border-color:var(--orange);background:var(--orange-lt);font-weight:700;max-width:260px">
         <div class="hint" id="sqm-hint">מזין ללא מע"מ — המחשבון מוסיף מע"מ בעצמו</div>
         <span class="error-msg">שדה חובה — הזן מחיר דוח אפס</span>
       </div>
+    </div>
+    <div class="g2 mb3">
       <div class="fg">
         <label style="display:flex;align-items:center;gap:4px">
           תוספות דוח אפס (₪)
