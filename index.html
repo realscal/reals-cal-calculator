@@ -2814,27 +2814,25 @@ function runCalc(){
   // Breakdown
   const bk = document.getElementById('calc-breakdown');
   if(bk) bk.innerHTML = calcPmts.map((p,i)=>{
-    const nomN=minN*(p.pct/100), pvN=nomN/Math.pow(1+r,p.months);
-    const nomG=nomN*(1+_pc.vat/100), pvG=pvN*(1+_pc.vat/100);
+    const nomG = minN*(p.pct/100)*(1+_pc.vat/100);
+    const fc_pmt = _pc.creditPerApt ? _pc.creditPerApt*(p.pct/100)*(_pc.baseRate/100)*(p.months/12) : 0;
     return `<div class="npv-row">
       <div><span class="bold s">${p.label||'פעימה '+(i+1)}</span> <span class="dim xs">${p.pct}% בחודש ${p.months}</span></div>
       <div class="fc">
-        <span class="dim xs">${fmt(nomG)} נומינלי</span>
-        <span class="dim">→</span>
-        <span class="bold">${fmt(pvG)} PV</span>
-        <span class="bdg bdg-r xs">-${fmt((nomN-pvN)*(1+_pc.vat/100))}</span>
+        <span class="bold">${fmt(nomG)}</span>
+        ${fc_pmt>0?`<span class="bdg bdg-r xs">עלות מימון: ${fmt(Math.round(fc_pmt))}</span>`:'<span class="bdg bdg-g xs">ללא עלות מימון</span>'}
       </div>
     </div>`;
   }).join('');
 
   const sm = document.getElementById('calc-summary');
+  const fcTotal = calcFinancingCost(calcPmts, _pc);
   if(sm) sm.innerHTML =
-    'NPV Factor: <strong>'+f.toFixed(4)+'</strong> | יעד נטו: '+fmt(tN)+
-    (loan?' | <span class="cblue">עלות הלוואה: '+fmt(loan.cost)+'</span>':'')+
-    ' | מינימום נטו: '+fmt(minN)+
-    ' | <span class="cred bold">מינימום ברוטו: '+fmt(flrG)+'</span>'+
+    'יעד נטו: '+fmt(tN)+
+    (fcTotal>0?' | <span class="corange">עלות מימון: '+fmt(Math.round(fcTotal))+'</span>':' | <span class="cgreen">ללא עלות מימון</span>')+
+    ' | <span class="cred bold">רצפה ברוטו: '+fmt(flrG)+'</span>'+
     (mkt?' | מחירון: '+fmt(mkt)+' | <span class="cgreen bold">מרווח: '+fmt(mkt-flrG)+' ('+((mkt-flrG)/mkt*100).toFixed(1)+'%)</span>':'')+
-    (loan?` | <span class="cblue">הלוואת קבלן: ${fmt(loan.amt)} | ${loan.months} חודש | ${loan.rate}% | NPV נטו: ${fmt(Math.round(calcLoanNPV(loan,_pc.rate,_pc.vat)))}</span>`:'');
+    (loan?` | <span class="cblue">הלוואת קבלן: ${fmt(loan.amt)} | ${loan.months} חודש | ${loan.rate}%</span>`:'');
 
   // Clear offer
   const oi = document.getElementById('calc-offer');
