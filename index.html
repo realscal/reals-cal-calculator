@@ -1585,9 +1585,10 @@ function buildManager(){
       <div class="ib ib-b s" style="padding:6px 12px">בחר פרויקט → דירה → פריסה → קבל מחיר סגירה</div>
     </div>
 
-    <div class="g2" style="align-items:start">
+    <!-- מחשבון: פריסה דו-עמודתית — בחירות שמאל, תוצאה ימין sticky -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
-      <!-- LEFT COLUMN: selections -->
+      <!-- עמודה שמאל: בחירות (פרויקט + דירה + פריסה) -->
       <div>
         <!-- STEP 1: PROJECT -->
         <div class="card mb3">
@@ -1645,8 +1646,8 @@ function buildManager(){
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: result — sticky בזמן גלילה -->
-      <div style="position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;padding-left:4px">
+      <!-- עמודה ימין: תוצאה — sticky -->
+      <div style="position:sticky;top:72px">
         <!-- apt info card -->
         <div class="card mb3" id="calc-apt-info" style="display:none">
           <div class="card-hd"><h3>פרטי הדירה</h3></div>
