@@ -2584,8 +2584,9 @@ function selectCalcApt(id){
   // עדכן פרטי דירה בפאנל הימני
   const det = document.getElementById('calc-apt-details');
   if(det){
+    const _pcDet = projCfg(calcProj);
     const bf = bankFloor(calcApt);
-    const tN = targetNet(calcApt);
+    const tN = targetNet(calcApt, _pcDet);
     det.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.83rem">
         <div><span class="dim">דירה</span><br><strong style="font-size:1.05rem">מספר ${calcApt.num}</strong></div>
@@ -2595,7 +2596,7 @@ function selectCalcApt(id){
         ${calcApt.balcony?`<div><span class="dim">מרפסת (50%)</span><br><strong>${calcApt.balcony} מ"ר → ${fmt(calcApt.balcony*calcApt.sqm*0.5)}</strong></div>`:''}
         ${calcApt.garden?`<div><span class="dim">גינה (33%)</span><br><strong>${calcApt.garden} מ"ר → ${fmt(calcApt.garden*calcApt.sqm*(1/3))}</strong></div>`:''}
         <div><span class="dim">דוח אפס נטו</span><br><strong>${fmt(bf)}</strong></div>
-        <div><span class="dim">יעד נטו (+${cfg.premium}%)</span><br><strong class="corange">${fmt(tN)}</strong></div>
+        <div><span class="dim">יעד נטו${_pcDet.premium>0?' (+'+_pcDet.premium+'%)':''}</span><br><strong class="corange">${fmt(tN)}</strong></div>
         ${calcApt.mkt?'<div style="grid-column:span 2"><span class="dim">מחיר שיווק</span><br><strong class="cg" style="font-size:1.1rem">'+fmt(calcApt.mkt)+'</strong></div>':''}
       </div>`;
   }
