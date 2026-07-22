@@ -3008,12 +3008,22 @@ ${aptInfo}
     _sb.from('apartments').update({reserved:true, sold:false}).eq('id',calcApt.id).eq('user_id',ownerId)
   ]);
 
-  // reset
+  // reset מחשבון
   calcApt=null; calcProj=null; calcPmts=[];
-  document.getElementById('calc-result').style.display='none';
-  document.getElementById('calc-placeholder').style.display='block';
-  renderAll();
-  showTab('deals', null);
+  const calcRes = document.getElementById('calc-result');
+  const calcPh  = document.getElementById('calc-placeholder');
+  const calcS2  = document.getElementById('calc-s2');
+  const calcS3  = document.getElementById('calc-s3');
+  if(calcRes) calcRes.style.display='none';
+  if(calcPh)  calcPh.style.display='block';
+  if(calcS2)  calcS2.style.display='none';
+  if(calcS3)  calcS3.style.display='none';
+
+  // עדכן רק לשוניות רלוונטיות
+  renderDash();
+  renderDeals();
+  renderCalcProjects();
+  showTab('deals', document.querySelector('nav button:nth-child(3)'));
   toast(isBelowFloor ? '⚠️ טופס הרשמה נוצר מתחת לרצפה' : '📋 טופס הרשמה נוצר — ממתין לחתימת חוזה');
 }
 
