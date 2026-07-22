@@ -1588,6 +1588,7 @@ function buildManager(){
       <button id="rt-team" onclick="switchReport('team',this)" style="padding:8px 16px;border:none;background:none;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px">ביצועי צוות</button>
       <button id="rt-npv" onclick="switchReport('npv',this)" style="padding:8px 16px;border:none;background:none;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px">רווחיות NPV</button>
       <button id="rt-status" onclick="switchReport('status',this)" style="padding:8px 16px;border:none;background:none;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px">סטטוס דירות</button>
+      <button id="rt-spreads" onclick="switchReport('spreads',this)" style="padding:8px 16px;border:none;background:none;font-family:'Heebo',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px">📊 פילוג פריסות</button>
     </div>
 
     <div id="report-content"></div>
@@ -3547,42 +3548,113 @@ function renderReports(){
     el.innerHTML = html;
   }
 
-  else if(currentReport === 'status'){
+  else if(currentReport === 'spreads'){
     let html = '';
-    filtProjs.forEach(p => {
-      const pApts = apts.filter(a=>a.projId===p.id);
-      if(!pApts.length) return;
-      const rows = pApts.map(a=>{
-        const bf = bankFloor(a);
-        const tn = targetNet(a);
-        const fl = floorGross(a, p.payments);
-        const statusBadge = a.sold
-          ? '<span class="bdg bdg-or">✅ נמכרה</span>'
-          : a.reserved
-            ? '<span class="bdg bdg-b">🟡 מוקפאת</span>'
-            : '<span class="bdg bdg-g">🟢 פנויה</span>';
-        return '<tr>'
-          +'<td class="bold">'+a.num+'</td>'
-          +'<td>'+a.floor+'</td>'
-          +'<td>'+(a.type||'—')+'</td>'
-          +'<td>'+a.area+' מ"ר</td>'
-          +'<td class="dim xs">'+(a.balcony?a.balcony+' מ"ר':'—')+'</td>'
-          +'<td class="dim xs">'+(a.garden?a.garden+' מ"ר':'—')+'</td>'
-          +'<td>'+fmt(bf)+'</td>'
-          +'<td>'+fmt(tn)+'</td>'
-          +'<td class="bold">'+fmt(fl)+'</td>'
-          +'<td>'+(a.mkt?fmt(a.mkt):'—')+'</td>'
-          +'<td>'+statusBadge+'</td>'
-          +'</tr>';
-      }).join('');
-      html += '<div class="card mb3">'
-        +'<div class="card-hd"><h3>'+p.name+'</h3></div>'
-        +'<div class="tbl-wrap"><table>'
-        +'<thead><tr><th>דירה</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>דוח אפס</th><th>יעד נטו</th><th>רצפה ברוטו</th><th>מחירון</th><th>סטטוס</th></tr></thead>'
-        +'<tbody>'+rows+'</tbody>'
-        +'</table></div></div>';
+    filtProjs.forEach(p=>{
+      const pDeals = filtDeals.filter(d=>d.projId===p.id && d.status==='APP');
+      const pApts  = apts.filter(a=>a.projId===p.id);
+      if(!pDeals.length) return;
+
+      // חשב ממוצע פריסה לכל עסקה
+      const dealSpreads = pDeals.map(d=>{
+        const pmts = d.pmts||[];
+        // % שמגיע ביום 0
+        const upfront = pmts.filter(p=>p.months===0).reduce((s,p)=>s+p.pct,0);
+        // חודשים ממוצעים משוקללים
+        const avgMonths = pmts.reduce((s,p)=>s+(p.months*(p.pct/100)),0);
+        return { deal:d, upfront, avgMonths, pmts };
+      });
+
+      // ממוצע פרויקט
+      const avgUpfront = dealSpreads.reduce((s,x)=>s+x.upfront,0)/dealSpreads.length;
+      const avgMonths  = dealSpreads.reduce((s,x)=>s+x.avgMonths,0)/dealSpreads.length;
+
+      // סיכום תזרים צפוי
+      let cashByMonth = {};
+      pDeals.forEach(d=>{
+        (d.pmts||[]).forEach(p=>{
+          const m = p.months;
+          const amt = d.gross*(p.pct/100);
+          cashByMonth[m] = (cashByMonth[m]||0) + amt;
+        });
+      });
+
+      html += `<div class="card mb3">
+        <div class="card-hd">
+          <h3>${p.name}${p.loc?' — '+p.loc:''}</h3>
+          <div class="fc">
+            <span class="bdg bdg-g">${pDeals.length} עסקאות</span>
+            <span class="bdg bdg-b">ממוצע ${avgUpfront.toFixed(0)}% מראש</span>
+            <span class="bdg bdg-o">ממוצע מסירה חודש ${avgMonths.toFixed(0)}</span>
+          </div>
+        </div>
+
+        <!-- טבלת עסקאות -->
+        <div class="tbl-wrap mb3">
+          <table>
+            <thead><tr>
+              <th>דירה</th>
+              <th>מחיר סגירה</th>
+              <th>פריסה בפועל</th>
+              <th>% מראש</th>
+              <th>חודשי המתנה ממוצע</th>
+              <th>תאריך</th>
+            </tr></thead>
+            <tbody>
+            ${dealSpreads.map(x=>{
+              const d=x.deal;
+              const pmtStr = x.pmts.map(p=>p.pct+'% / '+p.months+'m').join(' + ');
+              const color = x.upfront>=70?'cgreen':x.upfront>=40?'cg':'corange';
+              return `<tr>
+                <td class="bold">דירה ${d.aptNum}<br><span class="dim xs">${d.projName||''}</span></td>
+                <td class="bold">${fmt(d.gross)}</td>
+                <td class="dim xs">${pmtStr}</td>
+                <td class="${color} bold">${x.upfront.toFixed(0)}%</td>
+                <td class="dim">${x.avgMonths.toFixed(1)} חודש</td>
+                <td class="dim xs">${d.date||''}</td>
+              </tr>`;
+            }).join('')}
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--primary-lt);font-weight:700">
+                <td colspan="2">ממוצע פרויקט</td>
+                <td>—</td>
+                <td class="bold">${avgUpfront.toFixed(1)}% מראש</td>
+                <td class="bold">${avgMonths.toFixed(1)} חודש</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- תזרים צפוי לפי חודשים -->
+        <div class="card-hd" style="margin-top:8px"><h3>💰 תזרים צפוי לפי חודשים</h3></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>חודש</th><th>סכום צפוי</th><th>% מסך המכירות</th></tr></thead>
+            <tbody>
+            ${Object.keys(cashByMonth).sort((a,b)=>+a-+b).map(m=>{
+              const total = Object.values(cashByMonth).reduce((s,v)=>s+v,0);
+              const pct = (cashByMonth[m]/total*100).toFixed(1);
+              const barW = Math.round(cashByMonth[m]/total*100);
+              return `<tr>
+                <td class="bold">${m==0?'יום חתימה':'חודש '+m}</td>
+                <td class="bold cgreen">${fmt(Math.round(cashByMonth[m]))}</td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="background:var(--primary);height:8px;border-radius:4px;width:${barW}%;min-width:4px;max-width:200px"></div>
+                    <span class="dim xs">${pct}%</span>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
     });
-    el.innerHTML = html || '<div class="empty dim" style="padding:60px;text-align:center">אין דירות</div>';
+
+    el.innerHTML = html || '<div class="empty dim" style="padding:60px;text-align:center">אין עסקאות חתומות להצגה</div>';
   }
 }
 
