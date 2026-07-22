@@ -2982,11 +2982,11 @@ ${aptInfo}
     discAmt:  discAmt,
     discPct:  +discPct.toFixed(2),
     pmts:     calcPmts.map(p=>({...p})),
-    npv:      npvNet,
+    npv:      priceNet,
     tNet:     tNet,
     excess:   excess,
     belowFloor: isBelowFloor,
-    status:   'REG', // טופס הרשמה — ממתין לחתימת חוזה
+    status:   'REG',
     date:     new Date().toLocaleDateString('he-IL'),
   };
 
@@ -3716,10 +3716,10 @@ async function submitDeal(offerPrice){
     discAmt:  discAmt,
     discPct:  +discPct.toFixed(2),
     pmts:     svPmts.map(p=>({...p})),
-    npv:      npvNet,
+    npv:      priceNet,
     tNet:     tNet,
     excess:   excess,
-    status:   'REG',  // טופס הרשמה — ממתין לאישור מנהל
+    status:   'REG',
     date:     new Date().toLocaleDateString('he-IL'),
   };
 
