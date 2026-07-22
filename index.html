@@ -2897,12 +2897,13 @@ function calcCheckOffer(){
   if(!offer || !calcApt){ if(el) el.innerHTML=''; return; }
   const _pc  = projCfg(calcProj);
   const loan = getCalcLoan('calc');
-  // f no longer needed for floor calc
   const flrG = calcFloorWithLoan(targetNet(calcApt), calcPmts, _pc.vat, loan, _pc);
   const ok   = offer >= flrG;
   const diff = offer - flrG;
-  const npvNet = offer/(1+_pc.vat/100)*f;
-  const excess = npvNet - targetNet(calcApt);
+  // excess = כמה מעל הרצפה (ללא מע"מ)
+  const offerNet = offer/(1+_pc.vat/100);
+  const flrNet   = flrG/(1+_pc.vat/100);
+  const excess   = offerNet - flrNet;
   // Manager can sell below floor — show warning but allow
   const statusHtml = ok
     ? `<div class="ib ib-g" style="font-size:.9rem;padding:16px 18px">
@@ -2960,9 +2961,9 @@ ${aptInfo}
   if(!confirm(warnMsg)) return;
 
   const priceNet = offerPrice/(1+_pc.vat/100);
-  const npvNet   = priceNet*f;
+  const flrNet   = flrG/(1+_pc.vat/100);
   const tNet     = targetNet(calcApt);
-  const excess   = npvNet - tNet;
+  const excess   = priceNet - flrNet; // עודף מעל הרצפה נטו
   const mkt      = calcApt.mkt||0;
   const discAmt  = mkt ? mkt-offerPrice : 0;
   const discPct  = mkt ? (discAmt/mkt*100) : 0;
@@ -3694,9 +3695,9 @@ async function submitDeal(offerPrice){
   // f no longer needed
   const flrG   = calcFloorWithLoan(targetNet(svApt), svPmts, _svpc.vat, loan_sv, _svpc);
   const priceNet = offerPrice/(1+_svpc.vat/100);
-  const npvNet   = priceNet*f;
+  const flrNet   = flrG/(1+_svpc.vat/100);
   const tNet     = targetNet(svApt);
-  const excess   = npvNet - tNet;
+  const excess   = priceNet - flrNet;
   const mkt      = svApt.mkt||0;
   const discAmt  = mkt ? mkt-offerPrice : 0;
   const discPct  = mkt ? (discAmt/mkt*100) : 0;
