@@ -1756,7 +1756,74 @@ function renderDash(){
 
   // Dough
   const dc=document.getElementById('cdough');
-  if(dc){if(_charts.dough)_charts.dough.destroy();const sp=deals.length?[deals.reduce((a,d)=>a+(d.pmts[0]?.pct||0),0)/deals.length,deals.reduce((a,d)=>a+(d.pmts[1]?.pct||0),0)/deals.length,deals.reduce((a,d)=>a+(d.pmts[2]?.pct||0),0)/deals.length]:[20,60,20];_charts.dough=new Chart(dc,{type:'doughnut',data:{labels:['פעימה 1','פעימה 2','פעימה 3'],datasets:[{data:sp,backgroundColor:['#a8720a','#0f5299','#186038'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#55504a',font:{family:'Heebo'},padding:12}}}}});}
+  if(dc){
+    if(_charts.dough) _charts.dough.destroy();
+    // חשב ממוצע פריסה מכל העסקאות
+    const appDealsForChart = deals.filter(d=>d.status==='APP');
+    let sp, labels;
+    if(appDealsForChart.length){
+      // מצא את מספר הפעימות המקסימלי
+      const maxPmts = Math.max(...appDealsForChart.map(d=>d.pmts?.length||2));
+      sp = []; labels = [];
+      for(let i=0;i<maxPmts;i++){
+        const avg = appDealsForChart.reduce((a,d)=>a+(d.pmts?.[i]?.pct||0),0)/appDealsForChart.length;
+        if(avg>0){
+          sp.push(+avg.toFixed(1));
+          const months = appDealsForChart[0]?.pmts?.[i]?.months;
+          labels.push((d=>d.pmts?.[i]?.label||('פעימה '+(i+1)))(appDealsForChart[0]) + ' — ' + avg.toFixed(0)+'%');
+        }
+      }
+    } else {
+      sp=[20,80]; labels=['פעימה 1 — 20%','פעימה 2 — 80%'];
+    }
+    const colors=['#a8720a','#0f5299','#186038','#6d28d9','#b45309'];
+    _charts.dough = new Chart(dc,{
+      type:'doughnut',
+      data:{
+        labels,
+        datasets:[{
+          data:sp,
+          backgroundColor:colors.slice(0,sp.length),
+          borderWidth:2,
+          borderColor:'#fff',
+          hoverOffset:8
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{
+            position:'right',
+            labels:{color:'#55504a',font:{family:'Heebo',size:12},padding:14}
+          },
+          tooltip:{
+            callbacks:{
+              label: ctx=>' '+ctx.parsed.toFixed(1)+'% מהמכירות'
+            }
+          }
+        }
+      },
+      plugins:[{
+        id:'doughLabels',
+        afterDatasetsDraw(chart){
+          const {ctx,data} = chart;
+          ctx.save();
+          chart.getDatasetMeta(0).data.forEach((arc,i)=>{
+            const {x,y} = arc.tooltipPosition();
+            const val = data.datasets[0].data[i];
+            if(val<8) return; // לא מציג אחוז על פרוסות קטנות מדי
+            ctx.fillStyle='#fff';
+            ctx.font='bold 11px Heebo';
+            ctx.textAlign='center';
+            ctx.textBaseline='middle';
+            ctx.fillText(val.toFixed(0)+'%',x,y);
+          });
+          ctx.restore();
+        }
+      }]
+    });
+  }
 
   // Recent
   const re=document.getElementById('recent');
