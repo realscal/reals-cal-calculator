@@ -3639,6 +3639,54 @@ function renderReports(){
     el.innerHTML = html;
   }
 
+  else if(currentReport === 'status'){
+    let html = '';
+    filtProjs.forEach(p => {
+      const pApts = apts.filter(a=>a.projId===p.id).sort(aptSort);
+      if(!pApts.length) return;
+      const pc = projCfg(p);
+      const rows = pApts.map(a=>{
+        const bf  = bankFloor(a);
+        const tN  = targetNet(a, pc);
+        const fl  = floorGross(a, p.payments, pc);
+        const statusBadge = a.sold
+          ? '<span class="bdg bdg-or">✅ נמכרה</span>'
+          : a.reserved
+            ? '<span class="bdg bdg-b">🟡 מוקפאת</span>'
+            : '<span class="bdg bdg-g">🟢 פנויה</span>';
+        return '<tr>'
+          +'<td class="bold">'+a.num+'</td>'
+          +'<td class="dim xs">'+(a.building||'—')+'</td>'
+          +'<td>'+a.floor+'</td>'
+          +'<td>'+(a.type||'—')+'</td>'
+          +'<td>'+a.area+' מ"ר</td>'
+          +'<td class="dim xs">'+(a.balcony?a.balcony+' מ"ר':'—')+'</td>'
+          +'<td class="dim xs">'+(a.garden?a.garden+' מ"ר':'—')+'</td>'
+          +'<td>'+fmt(bf)+'</td>'
+          +'<td class="corange">'+fmt(tN)+'</td>'
+          +'<td class="bold">'+fmt(fl)+'</td>'
+          +'<td>'+(a.mkt?fmt(a.mkt):'—')+'</td>'
+          +'<td>'+statusBadge+'</td>'
+          +'</tr>';
+      }).join('');
+      const sold     = pApts.filter(a=>a.sold).length;
+      const reserved = pApts.filter(a=>a.reserved&&!a.sold).length;
+      const avail    = pApts.filter(a=>!a.sold&&!a.reserved).length;
+      html += '<div class="card mb3">'
+        +'<div class="card-hd"><h3>'+p.name+(p.loc?' — '+p.loc:'')+'</h3>'
+        +'<div class="fc">'
+        +'<span class="bdg bdg-g">🟢 '+avail+' פנויות</span>'
+        +'<span class="bdg bdg-b">🟡 '+reserved+' מוקפאות</span>'
+        +'<span class="bdg bdg-or">✅ '+sold+' נמכרו</span>'
+        +'</div></div>'
+        +'<div class="tbl-wrap"><table>'
+        +'<thead><tr><th>דירה</th><th>בניין</th><th>קומה</th><th>חדרים</th><th>שטח</th><th>מרפסת</th><th>גינה</th><th>דוח אפס</th><th>יעד נטו</th><th>רצפה ברוטו</th><th>מחירון</th><th>סטטוס</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody>'
+        +'</table></div></div>';
+    });
+    el.innerHTML = html || '<div class="empty dim" style="padding:60px;text-align:center">אין דירות</div>';
+  }
+
   else if(currentReport === 'spreads'){
     let html = '';
     filtProjs.forEach(p=>{
