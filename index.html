@@ -2334,12 +2334,18 @@ async function deleteD(id){
   if(a){ a.sold=false; a.reserved=false; }
   deals=deals.filter(x=>x.id!==id);
   const ownerId = me.owner_id || me.id;
-  await _sb.from('deals').delete().eq('id',id).eq('user_id',ownerId);
-  if(a) await _sb.from('apartments').update({sold:false, reserved:false}).eq('id',a.id).eq('user_id',ownerId);
-  if(wasApproved){
-    await _sb.from('market_data').delete().eq('deal_id', id);
-    if(_marketData.length) loadMarketData();
+  const r1 = await _sb.from('deals').delete().eq('id',id).eq('user_id',ownerId);
+  if(r1.error) console.error('deals delete',r1.error);
+  if(a){
+    const r2 = await _sb.from('apartments').update({sold:false, reserved:false}).eq('id',a.id).eq('user_id',ownerId);
+    if(r2.error){ console.error('apt update',r2.error); toast('⚠ שגיאה בעדכון הדירה: '+r2.error.message); }
   }
+  // always remove market rows of this deal (also for non-approved, harmless)
+  const r3 = await _sb.from('market_data').delete().eq('deal_id', id);
+  if(r3.error){ console.error('market delete',r3.error); toast('⚠ שגיאה במחיקת נתוני שוק: '+r3.error.message); }
+  _marketData = _marketData.filter(r=>r.deal_id!==id);
+  if(document.getElementById('market-content')) loadMarketData();
+  renderProjects();
   renderDeals(); renderDash();
   toast(wasApproved ? '↩ עסקה בוטלה — הדירה חזרה לפנויות' : '🗑 עסקה נמחקה');
 }
